@@ -28,7 +28,7 @@ class ProductApp {
 
     setupEventListeners() {
         // Navegação
-        document.querySelectorAll('.nav-btn').forEach(btn => {
+        document.querySelectorAll('.nav-item').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const section = e.target.closest('[data-section]').dataset.section;
                 this.switchSection(section);
@@ -180,16 +180,16 @@ class ProductApp {
         this.currentSection = section;
         
         // Atualizar navegação
-        document.querySelectorAll('.nav-btn').forEach(btn => {
+        document.querySelectorAll('.nav-item').forEach(btn => {
             btn.classList.remove('active');
         });
         document.querySelector(`[data-section="${section}"]`).classList.add('active');
 
         // Mostrar/ocultar seções
         document.querySelectorAll('.section').forEach(section => {
-            section.style.display = 'none';
+            section.classList.remove('active');
         });
-        document.getElementById(section).style.display = 'block';
+        document.getElementById(section).classList.add('active');
 
         // Atualizar conteúdo específico da seção
         if (section === 'estatisticas') {
@@ -432,9 +432,11 @@ class ProductApp {
             document.getElementById('produto-nome').value = product.name;
             document.getElementById('produto-categoria').value = product.category;
             document.getElementById('produto-preco').value = product.price;
-            document.getElementById('produto-descricao').value = product.description || '';
-            document.getElementById('produto-sku').value = product.sku || '';
-            document.getElementById('produto-estoque').value = product.stock || 0;
+            
+            // Campos que foram removidos no design simplificado - comentados
+            // document.getElementById('produto-descricao').value = product.description || '';
+            // document.getElementById('produto-sku').value = product.sku || '';
+            // document.getElementById('produto-estoque').value = product.stock || 0;
         } else {
             // Modo criação
             this.isEditing = false;
@@ -442,12 +444,13 @@ class ProductApp {
             title.textContent = 'Adicionar Produto';
         }
 
-        modal.style.display = 'flex';
+        modal.classList.add('show');
         document.getElementById('produto-nome').focus();
     }
 
     closeModal() {
-        document.getElementById('modal-produto').style.display = 'none';
+        const modal = document.getElementById('modal-produto');
+        modal.classList.remove('show');
         this.isEditing = false;
         this.editingProductName = null;
     }
@@ -459,10 +462,11 @@ class ProductApp {
         const productData = {
             name: formData.get('nome').trim(),
             category: formData.get('categoria'),
-            price: parseFloat(formData.get('preco')),
-            description: formData.get('descricao').trim(),
-            sku: formData.get('sku').trim(),
-            stock_quantity: parseInt(formData.get('estoque')) || 0
+            price: parseFloat(formData.get('preco'))
+            // Campos removidos no design simplificado:
+            // description: formData.get('descricao').trim(),
+            // sku: formData.get('sku').trim(),
+            // stock_quantity: parseInt(formData.get('estoque')) || 0
         };
 
         // Validações
