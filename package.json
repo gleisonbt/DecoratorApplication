@@ -1,12 +1,12 @@
 {
   "name": "decorator-application",
   "version": "1.0.0",
-  "description": "Uma aplicação TypeScript simples",
-  "main": "dist/index.js",
+  "description": "Uma aplicação TypeScript demonstrando arquitetura MVC e padrão Decorator",
+  "main": "dist/app.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
+    "start": "node dist/app.js",
+    "dev": "ts-node src/app.ts",
     "watch": "tsc --watch",
     "clean": "rimraf dist"
   },

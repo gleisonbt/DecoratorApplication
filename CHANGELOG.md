@@ -1,5 +1,37 @@
 # CHANGELOG
 
+## [2.0.0] - 2025-10-01
+
+### Changed
+- **BREAKING CHANGE**: Reestruturado para arquitetura MVC
+- Removidos arquivos: `index.ts`, `User.ts`, `UserService.ts`
+- Aplicação agora foca em gerenciamento de produtos
+
+### Added
+- **Arquitetura MVC completa**:
+  - `ProductController.ts` - Controller para lógica de negócio
+  - `ProductService.ts` - Serviço para gerenciamento de dados
+  - `ProductView.ts` - Interface de usuário
+- **Sistema completo de produtos**:
+  - Cadastro, listagem, busca e remoção
+  - Categorização por eletrônicos, livros e alimentos
+  - Estatísticas e relatórios
+- **Sistema avançado de descontos**:
+  - Descontos por categoria específica
+  - Cupons universais
+  - Combinação de múltiplos descontos
+  - Cálculo automático de economia
+- **Demonstração interativa** com todos os recursos
+
+### Features
+- ✅ Arquitetura MVC bem estruturada
+- ✅ Padrão Decorator para preços e descontos
+- ✅ Sistema completo de gerenciamento de produtos
+- ✅ Interface de usuário rica e informativa
+- ✅ Cálculos automáticos de descontos
+- ✅ Estatísticas detalhadas
+- ✅ Busca e filtros por categoria
+
 ## [1.0.0] - 2025-09-30
 
 ### Added
