@@ -315,6 +315,18 @@ body {
     overflow: hidden;
 }
 
+.products-header {
+    padding: var(--spacing-4) var(--spacing-6);
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+}
+
+.product-count {
+    font-size: var(--font-size-sm);
+    color: var(--gray-600);
+    font-weight: 500;
+}
+
 .products-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -506,6 +518,24 @@ body {
     background: var(--gray-50);
     border-radius: var(--border-radius);
     border-left: 4px solid var(--primary-color);
+}
+
+.discount-total {
+    margin-top: var(--spacing-3);
+    padding: var(--spacing-3);
+    background: var(--primary-color);
+    color: var(--white);
+    border-radius: var(--border-radius);
+    text-align: center;
+    font-weight: 600;
+}
+
+.discount-warning {
+    display: block;
+    font-size: var(--font-size-xs);
+    font-weight: 400;
+    margin-top: var(--spacing-1);
+    opacity: 0.9;
 }
 
 .no-discounts {

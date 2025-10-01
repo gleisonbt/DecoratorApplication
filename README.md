@@ -21,7 +21,7 @@ src/
 ├── controllers/
 │   └── ProductController.ts  # Controller (lógica de controle)
 ├── models/
-│   ├── Category.ts          # Enum e utilitários de categoria
+│   ├── Product.ts           # Modelo Product com Category enum integrado
 │   ├── PriceCalc.ts         # Interface para cálculo de preços
 │   └── Product.ts           # Modelo de produto
 ├── services/

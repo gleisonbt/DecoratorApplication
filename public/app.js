@@ -1,5 +1,5 @@
-/**
- * Sistema de Gerenciamento de Produtos - Interface Web
+    /**
+ * Sistema de Gerenciamento de Produtos - Interface Web com Banco de Dados
  * Implementa as Heurísticas de Usabilidade de Nielsen
  */
 
@@ -14,185 +14,417 @@ class ProductApp {
         this.init();
     }
 
-    init() {
-        this.setupEventListeners();
-        this.loadSampleData();
-        this.updateUI();
-        this.showToast('success', 'Sistema iniciado', 'Bem-vindo ao Sistema de Gerenciamento de Produtos!');
+    async init() {
+        try {
+            this.setupEventListeners();
+            await this.loadProductsFromAPI();
+            this.updateUI();
+            this.showToast('success', 'Sistema iniciado', 'Conectado ao banco de dados MySQL!');
+        } catch (error) {
+            console.error('Erro na inicialização:', error);
+            this.showToast('error', 'Erro de inicialização', 'Problemas ao carregar o sistema');
+        }
     }
 
     setupEventListeners() {
         // Navegação
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.switchSection(e.target.dataset.section);
+                const section = e.target.closest('[data-section]').dataset.section;
+                this.switchSection(section);
             });
         });
 
-        // Botões principais
-        document.getElementById('btn-adicionar').addEventListener('click', () => this.openProductModal());
-        document.getElementById('btn-limpar-filtros').addEventListener('click', () => this.clearFilters());
-        document.getElementById('btn-atualizar-stats').addEventListener('click', () => this.updateStatistics());
+        // Verificar e configurar event listeners apenas se os elementos existem
+        const setupListener = (id, event, handler) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener(event, handler);
+            } else {
+                console.warn(`Elemento ${id} não encontrado`);
+            }
+        };
+
+        // Produtos
+        setupListener('btn-adicionar', 'click', () => this.openProductModal());
+        setupListener('btn-limpar-filtros', 'click', () => this.clearFilters());
+        setupListener('btn-atualizar-stats', 'click', () => this.updateStatistics());
 
         // Filtros
-        document.getElementById('filtro-categoria').addEventListener('change', () => this.applyFilters());
-        document.getElementById('filtro-busca').addEventListener('input', () => this.applyFilters());
+        setupListener('filtro-categoria', 'change', () => this.applyFilters());
+        setupListener('filtro-busca', 'input', () => this.applyFilters());
 
         // Modal
-        document.getElementById('modal-fechar').addEventListener('click', () => this.closeModal());
-        document.getElementById('btn-cancelar').addEventListener('click', () => this.closeModal());
-        document.getElementById('form-produto').addEventListener('submit', (e) => this.handleProductSubmit(e));
+        setupListener('modal-fechar', 'click', () => this.closeModal());
+        setupListener('btn-cancelar', 'click', () => this.closeModal());
+        setupListener('form-produto', 'submit', (e) => this.handleProductSubmit(e));
 
-        // Descontos
-        document.getElementById('btn-aplicar-categoria').addEventListener('click', () => this.applyCategoryDiscount());
-        document.getElementById('btn-aplicar-cupom').addEventListener('click', () => this.applyCouponDiscount());
-        document.getElementById('btn-limpar-descontos').addEventListener('click', () => this.clearDiscounts());
+        // Descontos  
+        setupListener('btn-aplicar-categoria', 'click', () => this.applyCategoryDiscount());
+        setupListener('btn-aplicar-cupom', 'click', () => this.applyCouponDiscount());
+        setupListener('btn-limpar-descontos', 'click', () => this.clearDiscounts());
 
-        // Fechar modal ao clicar fora
-        document.getElementById('modal-produto').addEventListener('click', (e) => {
-            if (e.target.id === 'modal-produto') {
+        // Fechar modal clicando no overlay
+        const modal = document.getElementById('modal-produto');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target.id === 'modal-produto') {
+                    this.closeModal();
+                }
+            });
+        }
+
+        // Tecla ESC para fechar modal
+        document.addEventListener('keydown', (e) => {
+            const modalElement = document.getElementById('modal-produto');
+            if (e.key === 'Escape' && modalElement && modalElement.style.display === 'flex') {
                 this.closeModal();
             }
         });
-
-        // Atalhos de teclado
-        document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
     }
 
-    // Heurística 1: Visibilidade do status do sistema
-    showLoading(show = true) {
-        const loading = document.getElementById('loading');
-        if (show) {
-            loading.classList.remove('hidden');
-        } else {
-            loading.classList.add('hidden');
+    // === API CALLS ===
+
+    async loadProductsFromAPI() {
+        try {
+            this.showLoading(true);
+            const response = await fetch('/api/products');
+            const result = await response.json();
+            
+            if (result.success) {
+                this.products = result.data.map(item => ({
+                    name: item.name,
+                    category: item.category,
+                    price: parseFloat(item.price),
+                    description: item.description || '',
+                    sku: item.sku || '',
+                    stock: item.stock_quantity || 0
+                }));
+                this.showToast('success', 'Produtos carregados', `${result.count} produtos encontrados no banco`);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            this.showToast('error', 'Erro ao carregar produtos', error.message);
+            console.error('Erro:', error);
+        } finally {
+            this.showLoading(false);
         }
     }
 
-    // Heurística 2: Correspondência entre sistema e mundo real
-    loadSampleData() {
-        const sampleProducts = [
-            { name: 'iPhone 15 Pro', category: 'eletronicos', price: 7999.99 },
-            { name: 'Samsung Galaxy S24', category: 'eletronicos', price: 4999.99 },
-            { name: 'O Hobbit', category: 'livros', price: 35.90 },
-            { name: 'Clean Code', category: 'livros', price: 89.99 },
-            { name: 'Arroz Integral 1kg', category: 'alimentos', price: 8.50 },
-            { name: 'Azeite Extra Virgem', category: 'alimentos', price: 25.90 }
-        ];
-
-        sampleProducts.forEach(product => {
-            this.addProduct(product.name, product.category, product.price, false);
-        });
+    async addProductToAPI(productData) {
+        try {
+            const response = await fetch('/api/products', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(productData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showToast('success', 'Produto adicionado', result.message);
+                await this.loadProductsFromAPI(); // Recarregar lista
+                return true;
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            this.showToast('error', 'Erro ao adicionar produto', error.message);
+            return false;
+        }
     }
 
-    // Heurística 3: Controle e liberdade do usuário
+    async removeProductFromAPI(productName) {
+        try {
+            const response = await fetch(`/api/products/${encodeURIComponent(productName)}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showToast('success', 'Produto removido', result.message);
+                await this.loadProductsFromAPI(); // Recarregar lista
+                return true;
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            this.showToast('error', 'Erro ao remover produto', error.message);
+            return false;
+        }
+    }
+
+    async loadStatisticsFromAPI() {
+        try {
+            const response = await fetch('/api/products/stats');
+            const result = await response.json();
+            
+            if (result.success) {
+                return result.data;
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            this.showToast('error', 'Erro ao carregar estatísticas', error.message);
+            return null;
+        }
+    }
+
+    // === UI MANAGEMENT ===
+
     switchSection(section) {
-        // Atualiza navegação
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.section === section);
-        });
-
-        // Atualiza seções
-        document.querySelectorAll('.section').forEach(sec => {
-            sec.classList.toggle('active', sec.id === section);
-        });
-
         this.currentSection = section;
         
+        // Atualizar navegação
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-section="${section}"]`).classList.add('active');
+
+        // Mostrar/ocultar seções
+        document.querySelectorAll('.section').forEach(section => {
+            section.style.display = 'none';
+        });
+        document.getElementById(section).style.display = 'block';
+
+        // Atualizar conteúdo específico da seção
         if (section === 'estatisticas') {
             this.updateStatistics();
+        } else if (section === 'produtos') {
+            this.updateProductsList();
         }
+    }
+
+    updateUI() {
+        this.updateProductsList();
+        this.updateFilters();
+        this.updateStatistics();
+        this.updateDiscountInfo();
+    }
+
+    updateProductsList() {
+        const container = document.getElementById('produtos-lista');
+        const filteredProducts = this.getFilteredProducts();
+
+        if (filteredProducts.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>Nenhum produto encontrado</h3>
+                    <p>Tente ajustar os filtros ou adicione novos produtos</p>
+                    <button class="btn btn-primary" onclick="productApp.openProductModal()">
+                        Adicionar Produto
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = filteredProducts.map(product => {
+            const finalPrice = this.calculateFinalPrice(product);
+            const discount = product.price - finalPrice;
+            const discountPercentage = this.getTotalDiscountPercentage(product);
+
+            return `
+                <div class="product-card" data-category="${product.category}">
+                    <div class="product-header">
+                        <h3 class="product-name">${product.name}</h3>
+                        <div class="product-actions">
+                            <button class="btn-icon edit-btn" onclick="productApp.editProduct('${product.name}')" 
+                                    title="Editar produto">
+                                ✏️
+                            </button>
+                            <button class="btn-icon delete-btn" onclick="productApp.confirmDelete('${product.name}')" 
+                                    title="Remover produto">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                    <div class="product-info">
+                        <div class="product-category">
+                            <span class="category-badge category-${product.category.toLowerCase()}">
+                                ${this.getCategoryDisplayName(product.category)}
+                            </span>
+                        </div>
+                        ${product.description ? `<p class="product-description">${product.description}</p>` : ''}
+                        <div class="product-details">
+                            <div class="product-price">
+                                ${discount > 0 ? `
+                                    <span class="original-price">R$ ${product.price.toFixed(2)}</span>
+                                    <span class="final-price">R$ ${finalPrice.toFixed(2)}</span>
+                                    <span class="discount-info">-${discountPercentage.toFixed(1)}%</span>
+                                ` : `
+                                    <span class="current-price">R$ ${product.price.toFixed(2)}</span>
+                                `}
+                            </div>
+                            ${product.sku ? `<div class="product-sku">SKU: ${product.sku}</div>` : ''}
+                            ${product.stock !== undefined ? `<div class="product-stock">Estoque: ${product.stock}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Atualizar contador
+        const countElement = document.getElementById('produtos-count');
+        if (countElement) {
+            countElement.textContent = `${filteredProducts.length} produto(s) encontrado(s)`;
+        }
+    }
+
+    updateFilters() {
+        const categoriaSelect = document.getElementById('filtro-categoria');
+        const categories = [...new Set(this.products.map(p => p.category))];
         
-        // Feedback visual
-        this.showToast('info', 'Navegação', `Seção "${this.getSectionName(section)}" carregada`);
+        categoriaSelect.innerHTML = '<option value="">Todas as categorias</option>' +
+            categories.map(cat => 
+                `<option value="${cat}">${this.getCategoryDisplayName(cat)}</option>`
+            ).join('');
     }
 
-    getSectionName(section) {
-        const names = {
-            'produtos': 'Produtos',
-            'descontos': 'Descontos',
-            'estatisticas': 'Estatísticas'
-        };
-        return names[section] || section;
-    }
+    async updateStatistics() {
+        if (this.currentSection !== 'estatisticas') return;
 
-    // Heurística 4: Consistência e padrões
-    formatCurrency(value) {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        }).format(value);
-    }
-
-    formatCategoryName(category) {
-        const names = {
-            'eletronicos': 'Eletrônicos',
-            'livros': 'Livros',
-            'alimentos': 'Alimentos'
-        };
-        return names[category] || category;
-    }
-
-    getCategoryIcon(category) {
-        const icons = {
-            'eletronicos': 'fas fa-laptop',
-            'livros': 'fas fa-book',
-            'alimentos': 'fas fa-apple-alt'
-        };
-        return icons[category] || 'fas fa-box';
-    }
-
-    // Heurística 5: Prevenção de erros
-    validateProduct(name, category, price) {
-        const errors = {};
-
-        if (!name || name.trim().length === 0) {
-            errors.name = 'Nome é obrigatório';
-        } else if (name.trim().length < 2) {
-            errors.name = 'Nome deve ter pelo menos 2 caracteres';
-        } else if (!this.isEditing && this.products.find(p => p.name.toLowerCase() === name.trim().toLowerCase())) {
-            errors.name = 'Produto com este nome já existe';
-        }
-
-        if (!category) {
-            errors.category = 'Categoria é obrigatória';
-        }
-
-        if (!price || price <= 0) {
-            errors.price = 'Preço deve ser maior que zero';
-        } else if (price > 999999) {
-            errors.price = 'Preço não pode exceder R$ 999.999,99';
-        }
-
-        return errors;
-    }
-
-    showValidationErrors(errors) {
-        // Limpa erros anteriores
-        document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-        document.querySelectorAll('.input').forEach(el => el.classList.remove('error'));
-
-        // Mostra novos erros
-        Object.entries(errors).forEach(([field, message]) => {
-            const errorEl = document.getElementById(`erro-${field}`);
-            const inputEl = document.getElementById(`produto-${field}`);
+        const stats = await this.loadStatisticsFromAPI();
+        if (!stats) {
+            // Fallback para estatísticas locais
+            const totalElement = document.getElementById('stat-total');
+            const precoMedioElement = document.getElementById('stat-preco-medio');
+            const maisCaroElement = document.getElementById('stat-mais-caro');
+            const maisBaratoElement = document.getElementById('stat-mais-barato');
             
-            if (errorEl) errorEl.textContent = message;
-            if (inputEl) inputEl.classList.add('error');
+            if (totalElement) totalElement.textContent = this.products.length;
+            if (precoMedioElement) precoMedioElement.textContent = `R$ ${this.calculateAveragePrice().toFixed(2)}`;
+            if (maisCaroElement) maisCaroElement.textContent = this.getMostExpensive();
+            if (maisBaratoElement) maisBaratoElement.textContent = this.getCheapest();
+            
+            this.updateCategoryChart(this.getProductsByCategory());
+        } else {
+            // Usar estatísticas da API
+            const totalElement = document.getElementById('stat-total');
+            const precoMedioElement = document.getElementById('stat-preco-medio');
+            const maisCaroElement = document.getElementById('stat-mais-caro');
+            const maisBaratoElement = document.getElementById('stat-mais-barato');
+            
+            if (totalElement) totalElement.textContent = stats.totalProducts;
+            if (precoMedioElement) precoMedioElement.textContent = `R$ ${parseFloat(stats.averagePrice).toFixed(2)}`;
+            if (maisCaroElement) maisCaroElement.textContent = stats.mostExpensiveProduct || 'N/A';
+            if (maisBaratoElement) maisBaratoElement.textContent = stats.cheapestProduct || 'N/A';
+            
+            this.updateCategoryChart(stats.productsByCategory);
+        }
+
+        // Resumo de descontos
+        this.updateDiscountSummary();
+    }
+
+    updateCategoryChart(categoryData) {
+        const container = document.getElementById('chart-categorias');
+        if (!container) return;
+        
+        const total = Object.values(categoryData).reduce((sum, count) => sum + count, 0);
+
+        if (total === 0) {
+            container.innerHTML = '<p class="empty-state">Nenhum produto cadastrado</p>';
+            return;
+        }
+
+        container.innerHTML = Object.entries(categoryData).map(([category, count]) => {
+            const percentage = (count / total * 100).toFixed(1);
+            return `
+                <div class="chart-item">
+                    <div class="chart-label">
+                        <span class="category-badge category-${category.toLowerCase()}">
+                            ${this.getCategoryDisplayName(category)}
+                        </span>
+                        <span class="chart-value">${count} (${percentage}%)</span>
+                    </div>
+                    <div class="chart-bar">
+                        <div class="chart-fill category-${category.toLowerCase()}" 
+                             style="width: ${percentage}%"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    updateDiscountInfo() {
+        const container = document.getElementById('descontos-ativos');
+        if (!container) return;
+        
+        if (this.activeDiscounts.length === 0) {
+            container.innerHTML = '<div class="no-discounts">Nenhum desconto ativo no momento</div>';
+            return;
+        }
+
+        // Calcular total de desconto
+        const totalDiscount = this.activeDiscounts.reduce((sum, discount) => sum + discount.percentage, 0);
+        const limitedTotal = Math.min(totalDiscount, 100);
+
+        let discountHtml = this.activeDiscounts.map(discount => `
+            <div class="discount-item">
+                <span class="discount-type">${discount.type}</span>
+                <span class="discount-value">${discount.percentage}%</span>
+                <button class="btn-remove-discount" onclick="productApp.removeDiscount('${discount.id}')">
+                    ✕
+                </button>
+            </div>
+        `).join('');
+
+        // Adicionar resumo do total
+        if (this.activeDiscounts.length > 1) {
+            discountHtml += `
+                <div class="discount-total">
+                    <strong>Total: ${limitedTotal}%</strong>
+                    ${totalDiscount > 100 ? '<span class="discount-warning">(limitado a 100%)</span>' : ''}
+                </div>
+            `;
+        }
+
+        container.innerHTML = discountHtml;
+    }
+
+    updateDiscountSummary() {
+        const affectedProducts = this.products.filter(p => this.calculateFinalPrice(p) < p.price);
+        const totalSavings = this.products.reduce((sum, p) => sum + (p.price - this.calculateFinalPrice(p)), 0);
+
+        document.getElementById('produtos-com-desconto').textContent = affectedProducts.length;
+        document.getElementById('economia-total').textContent = `R$ ${totalSavings.toFixed(2)}`;
+    }
+
+    getFilteredProducts() {
+        const categoria = document.getElementById('filtro-categoria').value;
+        const busca = document.getElementById('filtro-busca').value.toLowerCase();
+
+        return this.products.filter(product => {
+            const matchCategory = !categoria || product.category === categoria;
+            const matchSearch = !busca || 
+                product.name.toLowerCase().includes(busca) ||
+                (product.description && product.description.toLowerCase().includes(busca));
+            
+            return matchCategory && matchSearch;
         });
     }
 
-    // Heurística 6: Reconhecimento ao invés de memorização
+    applyFilters() {
+        this.updateProductsList();
+    }
+
+    // === PRODUCT MANAGEMENT ===
+
     openProductModal(product = null) {
         const modal = document.getElementById('modal-produto');
-        const title = document.getElementById('modal-titulo');
         const form = document.getElementById('form-produto');
+        const title = document.getElementById('modal-titulo');
 
-        // Limpa validações anteriores
-        this.showValidationErrors({});
-
+        // Reset form
+        form.reset();
+        
         if (product) {
-            // Editando produto existente
+            // Modo edição
             this.isEditing = true;
             this.editingProductName = product.name;
             title.textContent = 'Editar Produto';
@@ -200,313 +432,157 @@ class ProductApp {
             document.getElementById('produto-nome').value = product.name;
             document.getElementById('produto-categoria').value = product.category;
             document.getElementById('produto-preco').value = product.price;
-            
-            document.getElementById('btn-salvar').innerHTML = '<i class="fas fa-save"></i> Atualizar';
+            document.getElementById('produto-descricao').value = product.description || '';
+            document.getElementById('produto-sku').value = product.sku || '';
+            document.getElementById('produto-estoque').value = product.stock || 0;
         } else {
-            // Adicionando novo produto
+            // Modo criação
             this.isEditing = false;
             this.editingProductName = null;
             title.textContent = 'Adicionar Produto';
-            
-            form.reset();
-            document.getElementById('btn-salvar').innerHTML = '<i class="fas fa-save"></i> Salvar';
         }
 
-        modal.classList.add('show');
-        
-        // Foco no primeiro campo
-        setTimeout(() => {
-            document.getElementById('produto-nome').focus();
-        }, 100);
+        modal.style.display = 'flex';
+        document.getElementById('produto-nome').focus();
     }
 
     closeModal() {
-        document.getElementById('modal-produto').classList.remove('show');
+        document.getElementById('modal-produto').style.display = 'none';
         this.isEditing = false;
         this.editingProductName = null;
     }
 
-    // Heurística 7: Flexibilidade e eficiência de uso
-    handleKeyboardShortcuts(e) {
-        // Ctrl/Cmd + N: Novo produto
-        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-            e.preventDefault();
-            if (this.currentSection === 'produtos') {
-                this.openProductModal();
-            }
-        }
-
-        // Escape: Fechar modal
-        if (e.key === 'Escape') {
-            this.closeModal();
-        }
-
-        // Ctrl/Cmd + F: Focar na busca
-        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-            e.preventDefault();
-            if (this.currentSection === 'produtos') {
-                document.getElementById('filtro-busca').focus();
-            }
-        }
-    }
-
-    handleProductSubmit(e) {
+    async handleProductSubmit(e) {
         e.preventDefault();
         
-        const name = document.getElementById('produto-nome').value.trim();
-        const category = document.getElementById('produto-categoria').value;
-        const price = parseFloat(document.getElementById('produto-preco').value);
+        const formData = new FormData(e.target);
+        const productData = {
+            name: formData.get('nome').trim(),
+            category: formData.get('categoria'),
+            price: parseFloat(formData.get('preco')),
+            description: formData.get('descricao').trim(),
+            sku: formData.get('sku').trim(),
+            stock_quantity: parseInt(formData.get('estoque')) || 0
+        };
 
-        const errors = this.validateProduct(name, category, price);
-        
-        if (Object.keys(errors).length > 0) {
-            this.showValidationErrors(errors);
-            this.showToast('error', 'Erro de validação', 'Corrija os campos destacados');
+        // Validações
+        if (!productData.name) {
+            this.showToast('error', 'Erro de validação', 'Nome do produto é obrigatório');
             return;
         }
 
-        this.showLoading(true);
-
-        // Simula operação assíncrona
-        setTimeout(() => {
-            try {
-                if (this.isEditing) {
-                    this.updateProduct(this.editingProductName, name, category, price);
-                    this.showToast('success', 'Produto atualizado', `${name} foi atualizado com sucesso`);
-                } else {
-                    this.addProduct(name, category, price);
-                    this.showToast('success', 'Produto adicionado', `${name} foi adicionado com sucesso`);
-                }
-                
-                this.closeModal();
-                this.updateUI();
-            } catch (error) {
-                this.showToast('error', 'Erro', error.message);
-            } finally {
-                this.showLoading(false);
-            }
-        }, 500);
-    }
-
-    addProduct(name, category, price, showFeedback = true) {
-        if (this.products.find(p => p.name.toLowerCase() === name.toLowerCase())) {
-            throw new Error('Produto com este nome já existe');
+        if (!productData.category) {
+            this.showToast('error', 'Erro de validação', 'Categoria é obrigatória');
+            return;
         }
 
-        this.products.push({
-            name: name.trim(),
-            category,
-            price: parseFloat(price),
-            id: Date.now() // ID simples baseado em timestamp
-        });
+        if (isNaN(productData.price) || productData.price <= 0) {
+            this.showToast('error', 'Erro de validação', 'Preço deve ser um número positivo');
+            return;
+        }
 
-        if (showFeedback) {
+        // Verificar duplicata (apenas para novos produtos)
+        if (!this.isEditing && this.products.some(p => p.name === productData.name)) {
+            this.showToast('error', 'Produto já existe', 'Já existe um produto com este nome');
+            return;
+        }
+
+        const success = await this.addProductToAPI(productData);
+        if (success) {
+            this.closeModal();
             this.updateUI();
         }
     }
 
-    updateProduct(originalName, newName, category, price) {
-        const productIndex = this.products.findIndex(p => p.name === originalName);
-        
-        if (productIndex === -1) {
-            throw new Error('Produto não encontrado');
+    editProduct(productName) {
+        const product = this.products.find(p => p.name === productName);
+        if (product) {
+            this.openProductModal(product);
         }
-
-        // Verifica se o novo nome já existe (exceto para o produto atual)
-        if (newName !== originalName && 
-            this.products.find(p => p.name.toLowerCase() === newName.toLowerCase())) {
-            throw new Error('Produto com este nome já existe');
-        }
-
-        this.products[productIndex] = {
-            ...this.products[productIndex],
-            name: newName.trim(),
-            category,
-            price: parseFloat(price)
-        };
     }
 
-    removeProduct(name) {
-        const index = this.products.findIndex(p => p.name === name);
-        if (index !== -1) {
-            const product = this.products[index];
-            this.products.splice(index, 1);
+    confirmDelete(productName) {
+        if (confirm(`Tem certeza que deseja remover o produto "${productName}"?`)) {
+            this.removeProduct(productName);
+        }
+    }
+
+    async removeProduct(productName) {
+        const success = await this.removeProductFromAPI(productName);
+        if (success) {
             this.updateUI();
-            this.showToast('success', 'Produto removido', `${product.name} foi removido`);
         }
     }
 
-    // Heurística 8: Design estético e minimalista
-    calculatePrice(product) {
-        let price = product.price;
-        let discount = 0;
+    // === DISCOUNT SYSTEM ===
 
-        // Aplica descontos na ordem correta
-        this.activeDiscounts.forEach(discountRule => {
-            if (discountRule.type === 'category' && product.category === discountRule.category) {
-                const discountAmount = price * discountRule.percent;
-                price -= discountAmount;
-                discount += discountAmount;
-            } else if (discountRule.type === 'coupon') {
-                const discountAmount = price * discountRule.percent;
-                price -= discountAmount;
-                discount += discountAmount;
-            }
-        });
-
-        return {
-            originalPrice: product.price,
-            finalPrice: price,
-            discount: discount,
-            discountPercent: product.price > 0 ? (discount / product.price) * 100 : 0
-        };
-    }
-
-    renderProduct(product) {
-        const priceInfo = this.calculatePrice(product);
-        const hasDiscount = priceInfo.discount > 0;
-
-        return `
-            <div class="product-card">
-                ${hasDiscount ? `<div class="discount-badge">-${priceInfo.discountPercent.toFixed(0)}%</div>` : ''}
-                <div class="product-header">
-                    <span class="product-category">
-                        <i class="${this.getCategoryIcon(product.category)}"></i>
-                        ${this.formatCategoryName(product.category)}
-                    </span>
-                    <div class="product-actions">
-                        <button class="btn btn-sm btn-secondary" onclick="app.openProductModal(${JSON.stringify(product).replace(/"/g, '&quot;')})" title="Editar produto">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="app.confirmRemoveProduct('${product.name}')" title="Remover produto">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                <h3 class="product-name">${product.name}</h3>
-                <div class="product-price">
-                    ${hasDiscount ? `
-                        <div class="price-discount">${this.formatCurrency(priceInfo.originalPrice)}</div>
-                        <div class="price-final">${this.formatCurrency(priceInfo.finalPrice)}</div>
-                        <small>Economia: ${this.formatCurrency(priceInfo.discount)}</small>
-                    ` : `
-                        <div class="price-original">${this.formatCurrency(priceInfo.originalPrice)}</div>
-                    `}
-                </div>
-            </div>
-        `;
-    }
-
-    confirmRemoveProduct(name) {
-        if (confirm(`Tem certeza que deseja remover "${name}"?`)) {
-            this.removeProduct(name);
-        }
-    }
-
-    updateProductsList() {
-        const container = document.getElementById('produtos-lista');
-        const emptyState = document.getElementById('produtos-vazio');
-        
-        const filteredProducts = this.getFilteredProducts();
-        
-        if (filteredProducts.length === 0) {
-            container.innerHTML = '';
-            emptyState.classList.remove('hidden');
-        } else {
-            emptyState.classList.add('hidden');
-            container.innerHTML = filteredProducts.map(product => this.renderProduct(product)).join('');
-        }
-    }
-
-    getFilteredProducts() {
-        const categoryFilter = document.getElementById('filtro-categoria').value;
-        const searchFilter = document.getElementById('filtro-busca').value.toLowerCase();
-
-        return this.products.filter(product => {
-            const matchesCategory = !categoryFilter || product.category === categoryFilter;
-            const matchesSearch = !searchFilter || product.name.toLowerCase().includes(searchFilter);
-            return matchesCategory && matchesSearch;
-        });
-    }
-
-    applyFilters() {
-        this.updateProductsList();
-        
-        // Feedback para o usuário
-        const filtered = this.getFilteredProducts();
-        const total = this.products.length;
-        
-        if (filtered.length !== total) {
-            this.showToast('info', 'Filtros aplicados', `Mostrando ${filtered.length} de ${total} produtos`);
-        }
-    }
-
-    clearFilters() {
-        document.getElementById('filtro-categoria').value = '';
-        document.getElementById('filtro-busca').value = '';
-        this.updateProductsList();
-        this.showToast('info', 'Filtros limpos', 'Todos os produtos estão sendo exibidos');
-    }
-
-    // Sistema de descontos
     applyCategoryDiscount() {
-        const category = document.getElementById('desconto-categoria').value;
-        const percent = parseFloat(document.getElementById('desconto-percentual').value) / 100;
+        const categoria = document.getElementById('desconto-categoria').value;
+        const percentual = parseFloat(document.getElementById('desconto-percentual').value);
 
-        if (!percent || percent <= 0 || percent > 1) {
-            this.showToast('error', 'Erro', 'Digite um percentual válido entre 1 e 100');
+        if (!categoria) {
+            this.showToast('error', 'Erro de validação', 'Selecione uma categoria');
             return;
         }
 
-        // Remove desconto anterior da mesma categoria
+        if (isNaN(percentual) || percentual <= 0 || percentual > 100) {
+            this.showToast('error', 'Erro de validação', 'Percentual deve ser entre 1 e 100');
+            return;
+        }
+
+        // Remover desconto existente da mesma categoria
         this.activeDiscounts = this.activeDiscounts.filter(d => 
-            !(d.type === 'category' && d.category === category)
+            !(d.type === 'Categoria' && d.category === categoria)
         );
 
-        // Adiciona novo desconto
+        // Adicionar novo desconto
         this.activeDiscounts.push({
-            type: 'category',
-            category: category,
-            percent: percent,
-            description: `${(percent * 100).toFixed(0)}% de desconto em ${this.formatCategoryName(category)}`
+            id: `category_${categoria}_${Date.now()}`,
+            type: 'Categoria',
+            category: categoria,
+            percentage: percentual
         });
 
-        this.updateDiscountStatus();
-        this.updateProductsList();
-        
-        // Limpa o formulário
-        document.getElementById('desconto-percentual').value = '';
-        
         this.showToast('success', 'Desconto aplicado', 
-            `${(percent * 100).toFixed(0)}% de desconto aplicado em ${this.formatCategoryName(category)}`);
+            `${percentual}% de desconto aplicado em ${this.getCategoryDisplayName(categoria)}`);
+        
+        this.updateUI();
+        
+        // Limpar form
+        document.getElementById('desconto-percentual').value = '';
     }
 
     applyCouponDiscount() {
-        const percent = parseFloat(document.getElementById('cupom-percentual').value) / 100;
+        const percentual = parseFloat(document.getElementById('cupom-percentual').value);
 
-        if (!percent || percent <= 0 || percent > 1) {
-            this.showToast('error', 'Erro', 'Digite um percentual válido entre 1 e 100');
+        if (isNaN(percentual) || percentual <= 0 || percentual > 100) {
+            this.showToast('error', 'Erro de validação', 'Percentual deve ser entre 1 e 100');
             return;
         }
 
-        // Remove cupom anterior
-        this.activeDiscounts = this.activeDiscounts.filter(d => d.type !== 'coupon');
+        // Remover cupom existente
+        this.activeDiscounts = this.activeDiscounts.filter(d => d.type !== 'Cupom');
 
-        // Adiciona novo cupom
+        // Adicionar novo cupom
         this.activeDiscounts.push({
-            type: 'coupon',
-            percent: percent,
-            description: `Cupom de ${(percent * 100).toFixed(0)}% para todos os produtos`
+            id: `coupon_${Date.now()}`,
+            type: 'Cupom',
+            percentage: percentual
         });
 
-        this.updateDiscountStatus();
-        this.updateProductsList();
-        
-        // Limpa o formulário
-        document.getElementById('cupom-percentual').value = '';
-        
         this.showToast('success', 'Cupom aplicado', 
-            `Cupom de ${(percent * 100).toFixed(0)}% aplicado a todos os produtos`);
+            `${percentual}% de desconto aplicado em todos os produtos`);
+        
+        this.updateUI();
+        
+        // Limpar form
+        document.getElementById('cupom-percentual').value = '';
+    }
+
+    removeDiscount(discountId) {
+        this.activeDiscounts = this.activeDiscounts.filter(d => d.id !== discountId);
+        this.showToast('success', 'Desconto removido', 'Desconto foi removido com sucesso');
+        this.updateUI();
     }
 
     clearDiscounts() {
@@ -516,173 +592,175 @@ class ProductApp {
         }
 
         this.activeDiscounts = [];
-        this.updateDiscountStatus();
-        this.updateProductsList();
         this.showToast('success', 'Descontos removidos', 'Todos os descontos foram removidos');
+        this.updateUI();
     }
 
-    updateDiscountStatus() {
-        const container = document.getElementById('descontos-ativos');
-        
-        if (this.activeDiscounts.length === 0) {
-            container.innerHTML = `
-                <div class="no-discounts">
-                    <i class="fas fa-info-circle"></i>
-                    Nenhum desconto ativo no momento
-                </div>
-            `;
-        } else {
-            container.innerHTML = this.activeDiscounts.map(discount => `
-                <div class="discount-item">
-                    <span>
-                        <i class="fas fa-tag"></i>
-                        ${discount.description}
-                    </span>
-                    <button class="btn btn-sm btn-danger" onclick="app.removeDiscount('${discount.type}', '${discount.category || ''}')" title="Remover desconto">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            `).join('');
-        }
-    }
-
-    removeDiscount(type, category) {
-        this.activeDiscounts = this.activeDiscounts.filter(d => 
-            !(d.type === type && (type !== 'category' || d.category === category))
-        );
-        
-        this.updateDiscountStatus();
+    clearFilters() {
+        document.getElementById('filtro-categoria').value = '';
+        document.getElementById('filtro-busca').value = '';
         this.updateProductsList();
-        this.showToast('success', 'Desconto removido', 'Desconto foi removido com sucesso');
+        this.showToast('success', 'Filtros limpos', 'Todos os filtros foram removidos');
     }
 
-    // Estatísticas
-    updateStatistics() {
-        const stats = this.calculateStatistics();
-        
-        document.getElementById('stat-total').textContent = stats.total;
-        document.getElementById('stat-preco-medio').textContent = this.formatCurrency(stats.averagePrice);
-        document.getElementById('stat-mais-caro').textContent = stats.mostExpensive || '-';
-        document.getElementById('stat-mais-barato').textContent = stats.cheapest || '-';
-        
-        this.updateCategoryChart(stats.byCategory);
-    }
+    // === CALCULATIONS ===
 
-    calculateStatistics() {
-        if (this.products.length === 0) {
-            return {
-                total: 0,
-                averagePrice: 0,
-                mostExpensive: null,
-                cheapest: null,
-                byCategory: {}
-            };
+    calculateFinalPrice(product) {
+        let finalPrice = product.price;
+        let totalDiscountPercentage = 0;
+
+        // Buscar descontos ativos para o produto
+        const categoryDiscount = this.activeDiscounts.find(d => 
+            d.type === 'Categoria' && d.category === product.category
+        );
+        const couponDiscount = this.activeDiscounts.find(d => d.type === 'Cupom');
+
+        // Aplicar desconto SIMPLES (soma dos percentuais)
+        if (categoryDiscount) {
+            totalDiscountPercentage += categoryDiscount.percentage;
+        }
+        if (couponDiscount) {
+            totalDiscountPercentage += couponDiscount.percentage;
         }
 
-        const prices = this.products.map(p => p.price);
-        const sorted = [...this.products].sort((a, b) => a.price - b.price);
-        
-        const byCategory = this.products.reduce((acc, product) => {
-            acc[product.category] = (acc[product.category] || 0) + 1;
-            return acc;
-        }, {});
+        // Limitar desconto máximo a 100%
+        totalDiscountPercentage = Math.min(totalDiscountPercentage, 100);
 
-        return {
-            total: this.products.length,
-            averagePrice: prices.reduce((sum, price) => sum + price, 0) / prices.length,
-            mostExpensive: sorted[sorted.length - 1]?.name,
-            cheapest: sorted[0]?.name,
-            byCategory
+        // Aplicar desconto total
+        finalPrice = product.price * (1 - totalDiscountPercentage / 100);
+
+        return finalPrice;
+    }
+
+    getTotalDiscountPercentage(product) {
+        let totalDiscountPercentage = 0;
+
+        // Buscar descontos ativos para o produto
+        const categoryDiscount = this.activeDiscounts.find(d => 
+            d.type === 'Categoria' && d.category === product.category
+        );
+        const couponDiscount = this.activeDiscounts.find(d => d.type === 'Cupom');
+
+        // Somar percentuais
+        if (categoryDiscount) {
+            totalDiscountPercentage += categoryDiscount.percentage;
+        }
+        if (couponDiscount) {
+            totalDiscountPercentage += couponDiscount.percentage;
+        }
+
+        // Limitar desconto máximo a 100%
+        return Math.min(totalDiscountPercentage, 100);
+    }
+
+    calculateAveragePrice() {
+        if (this.products.length === 0) return 0;
+        const total = this.products.reduce((sum, p) => sum + p.price, 0);
+        return total / this.products.length;
+    }
+
+    getMostExpensive() {
+        if (this.products.length === 0) return 'N/A';
+        return this.products.reduce((max, p) => p.price > max.price ? p : max).name;
+    }
+
+    getCheapest() {
+        if (this.products.length === 0) return 'N/A';
+        return this.products.reduce((min, p) => p.price < min.price ? p : min).name;
+    }
+
+    getProductsByCategory() {
+        const categories = {};
+        this.products.forEach(product => {
+            categories[product.category] = (categories[product.category] || 0) + 1;
+        });
+        return categories;
+    }
+
+    // === UTILITIES ===
+
+    getCategoryDisplayName(category) {
+        const displayNames = {
+            'eletronicos': 'Eletrônicos',
+            'livros': 'Livros',
+            'alimentos': 'Alimentos',
+            'roupas': 'Roupas',
+            'casa': 'Casa e Decoração',
+            'outros': 'Outros'
         };
+        return displayNames[category.toLowerCase()] || category;
     }
 
-    updateCategoryChart(byCategory) {
-        const container = document.getElementById('chart-categorias');
-        const maxCount = Math.max(...Object.values(byCategory), 1);
-        
-        const categories = ['eletronicos', 'livros', 'alimentos'];
-        
-        container.innerHTML = categories.map(category => {
-            const count = byCategory[category] || 0;
-            const percentage = (count / maxCount) * 100;
-            
-            return `
-                <div class="chart-item">
-                    <div class="chart-label">${this.formatCategoryName(category)}</div>
-                    <div class="chart-bar">
-                        <div class="chart-fill" style="width: ${percentage}%"></div>
-                    </div>
-                    <div class="chart-value">${count}</div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    // Heurística 9: Ajuda usuários a reconhecer, diagnosticar e recuperar de erros
-    showToast(type, title, message, duration = 4000) {
-        const container = document.getElementById('toast-container');
-        const toastId = `toast-${Date.now()}`;
-        
+    showToast(type, title, message) {
         const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.id = toastId;
+        toast.className = `toast toast-${type}`;
         toast.innerHTML = `
-            <div class="toast-icon">
-                <i class="fas ${this.getToastIcon(type)}"></i>
-            </div>
             <div class="toast-content">
                 <div class="toast-title">${title}</div>
                 <div class="toast-message">${message}</div>
             </div>
-            <button class="toast-close" onclick="app.closeToast('${toastId}')">
-                <i class="fas fa-times"></i>
-            </button>
+            <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
         `;
-        
+
+        const container = document.getElementById('toast-container');
         container.appendChild(toast);
-        
-        // Anima a entrada
-        setTimeout(() => toast.classList.add('show'), 100);
-        
-        // Remove automaticamente
-        setTimeout(() => this.closeToast(toastId), duration);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 5000);
+
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.style.transform = 'translateX(0)';
+            toast.style.opacity = '1';
+        });
     }
 
-    getToastIcon(type) {
-        const icons = {
-            'success': 'fa-check',
-            'error': 'fa-exclamation-triangle',
-            'warning': 'fa-exclamation',
-            'info': 'fa-info'
-        };
-        return icons[type] || 'fa-info';
-    }
-
-    closeToast(toastId) {
-        const toast = document.getElementById(toastId);
-        if (toast) {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
+    showLoading(show) {
+        const overlay = document.getElementById('loading');
+        if (show) {
+            overlay.style.display = 'flex';
+        } else {
+            overlay.style.display = 'none';
         }
-    }
-
-    // Heurística 10: Ajuda e documentação
-    updateUI() {
-        this.updateProductsList();
-        this.updateDiscountStatus();
-        this.updateStatistics();
     }
 }
 
-// Inicializa a aplicação quando o DOM estiver pronto
+// === INICIALIZAÇÃO ===
+
+// Aguardar carregamento do DOM
 document.addEventListener('DOMContentLoaded', () => {
-    window.app = new ProductApp();
+    window.productApp = new ProductApp();
+    
+    // Verificar status da API
+    fetch('/api/status')
+        .then(response => response.json())
+        .then(data => {
+            console.log('Status da API:', data);
+            if (data.database !== 'connected') {
+                productApp.showToast('warning', 'Aviso', 'Banco de dados não conectado');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao verificar status:', error);
+            productApp.showToast('error', 'Erro', 'Não foi possível conectar com a API');
+        });
 });
 
-// Previne perda de dados
-window.addEventListener('beforeunload', (e) => {
-    if (document.querySelector('.modal.show')) {
-        e.preventDefault();
-        e.returnValue = '';
+// === TRATAMENTO DE ERROS GLOBAIS ===
+window.addEventListener('error', (e) => {
+    console.error('Erro global:', e.error);
+    if (window.productApp) {
+        window.productApp.showToast('error', 'Erro inesperado', 'Algo deu errado. Verifique o console.');
+    }
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+    console.error('Promise rejeitada:', e.reason);
+    if (window.productApp) {
+        window.productApp.showToast('error', 'Erro de conexão', 'Problema na comunicação com o servidor');
     }
 });
