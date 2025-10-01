@@ -172,17 +172,45 @@
                     </div>
                 </div>
 
-                <!-- Status dos descontos -->
+                <!-- Status dos descontos melhorado -->
                 <div class="card mt-4">
-                    <h3 class="mb-3">
-                        <i class="fas fa-info-circle"></i>
-                        Descontos Ativos
-                    </h3>
+                    <div class="discount-status-header">
+                        <h3 class="mb-3">
+                            <i class="fas fa-tags"></i>
+                            Descontos Ativos
+                        </h3>
+                        <div class="total-discount" id="total-discount-display" style="display: flex !important; visibility: visible !important; background: linear-gradient(135deg, #28a745, #27ae60); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600; gap: 0.5rem; align-items: center;">
+                            <span class="total-label">Total:</span>
+                            <span class="total-value" id="total-discount-value">0%</span>
+                        </div>
+                    </div>
+                    
                     <div id="descontos-ativos">
-                        <p class="text-center" style="color: var(--gray-500);">
-                            <i class="fas fa-info-circle"></i>
-                            Nenhum desconto ativo no momento
-                        </p>
+                        <div class="no-discounts-state">
+                            <div class="empty-discount-icon">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                            <h4>Nenhum desconto ativo</h4>
+                            <p>Configure descontos acima para começar a economizar!</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Área de economia estimada -->
+                    <div class="savings-section" id="savings-section" style="display: none;">
+                        <div class="savings-header">
+                            <i class="fas fa-piggy-bank"></i>
+                            <span>Economia Estimada</span>
+                        </div>
+                        <div class="savings-content">
+                            <div class="savings-item">
+                                <span class="savings-label">Produtos afetados:</span>
+                                <span class="savings-number" id="affected-products-count">0</span>
+                            </div>
+                            <div class="savings-item">
+                                <span class="savings-label">Economia total:</span>
+                                <span class="savings-money" id="total-savings-amount">R$ 0,00</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>

@@ -230,6 +230,11 @@ class ProductApp {
 
             return `
                 <div class="product-card" data-category="${product.category}">
+                    ${discountPercentage > 0 ? `
+                        <div class="discount-post-it">
+                            <span class="discount-percentage">-${discountPercentage.toFixed(1)}%</span>
+                        </div>
+                    ` : ''}
                     <div class="product-header">
                         <h3 class="product-name">${product.name}</h3>
                         <div class="product-actions">
@@ -253,9 +258,11 @@ class ProductApp {
                         <div class="product-details">
                             <div class="product-price">
                                 ${discount > 0 ? `
-                                    <span class="original-price">R$ ${product.price.toFixed(2)}</span>
-                                    <span class="final-price">R$ ${finalPrice.toFixed(2)}</span>
-                                    <span class="discount-info">-${discountPercentage.toFixed(1)}%</span>
+                                    <div class="price-with-discount">
+                                        <span class="original-price">De: R$ ${product.price.toFixed(2)}</span>
+                                        <span class="final-price">Por: R$ ${finalPrice.toFixed(2)}</span>
+                                        <span class="savings-amount">Economia: R$ ${discount.toFixed(2)}</span>
+                                    </div>
                                 ` : `
                                     <span class="current-price">R$ ${product.price.toFixed(2)}</span>
                                 `}
@@ -316,9 +323,6 @@ class ProductApp {
             
             this.updateCategoryChart(stats.productsByCategory);
         }
-
-        // Resumo de descontos
-        this.updateDiscountSummary();
     }
 
     updateCategoryChart(categoryData) {
@@ -353,10 +357,31 @@ class ProductApp {
 
     updateDiscountInfo() {
         const container = document.getElementById('descontos-ativos');
+        const totalDisplay = document.getElementById('total-discount-display');
+        const totalValue = document.getElementById('total-discount-value');
+        const savingsSection = document.getElementById('savings-section');
+        
         if (!container) return;
         
         if (this.activeDiscounts.length === 0) {
-            container.innerHTML = '<div class="no-discounts">Nenhum desconto ativo no momento</div>';
+            // Mostrar estado vazio
+            container.innerHTML = `
+                <div class="no-discounts-state">
+                    <div class="empty-discount-icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <h4>Nenhum desconto ativo</h4>
+                    <p>Configure descontos acima para começar a economizar!</p>
+                </div>
+            `;
+            
+            // Manter badge total visível com 0%
+            if (totalValue) {
+                totalValue.textContent = '0%';
+            }
+            
+            // Esconder apenas seção de economia
+            if (savingsSection) savingsSection.style.display = 'none';
             return;
         }
 
@@ -364,35 +389,96 @@ class ProductApp {
         const totalDiscount = this.activeDiscounts.reduce((sum, discount) => sum + discount.percentage, 0);
         const limitedTotal = Math.min(totalDiscount, 100);
 
-        let discountHtml = this.activeDiscounts.map(discount => `
-            <div class="discount-item">
-                <span class="discount-type">${discount.type}</span>
-                <span class="discount-value">${discount.percentage}%</span>
-                <button class="btn-remove-discount" onclick="productApp.removeDiscount('${discount.id}')">
-                    ✕
-                </button>
-            </div>
-        `).join('');
+        // Criar cards de desconto
+        let discountHtml = this.activeDiscounts.map(discount => {
+            const typeLabels = {
+                'Categoria': 'Categoria',
+                'Cupom': 'Cupom',
+                'category': 'Categoria',
+                'bulk': 'Quantidade',
+                'seasonal': 'Sazonal',
+                'clearance': 'Liquidação',
+                'vip': 'VIP'
+            };
+            
+            const descriptions = {
+                'Categoria': `Desconto aplicado em ${discount.category ? this.getCategoryDisplayName(discount.category) : 'categoria selecionada'}`,
+                'Cupom': 'Cupom de desconto aplicado em todos os produtos',
+                'category': `Desconto aplicado em ${discount.category || 'categoria selecionada'}`,
+                'bulk': `Desconto para compras acima de ${discount.minQuantity || 1} unidades`,
+                'seasonal': 'Desconto promocional por tempo limitado',
+                'clearance': 'Desconto especial para liquidação de estoque',
+                'vip': 'Desconto exclusivo para clientes VIP'
+            };
 
-        // Adicionar resumo do total
-        if (this.activeDiscounts.length > 1) {
-            discountHtml += `
-                <div class="discount-total">
-                    <strong>Total: ${limitedTotal}%</strong>
-                    ${totalDiscount > 100 ? '<span class="discount-warning">(limitado a 100%)</span>' : ''}
+            return `
+                <div class="discount-card">
+                    <div class="discount-info">
+                        <div class="discount-type-badge" style="background: #007bff !important; color: white !important; padding: 0.3rem 0.8rem !important; border-radius: 20px !important; font-size: 0.8rem !important; font-weight: 600 !important; text-transform: uppercase !important; display: inline-block !important;">${typeLabels[discount.type] || discount.type}</div>
+                        <div class="discount-details">
+                            <div class="discount-title">
+                                ${typeLabels[discount.type] || discount.type} 
+                                ${discount.category ? `- ${this.getCategoryDisplayName(discount.category)}` : ''}
+                            </div>
+                            <p class="discount-description">
+                                ${descriptions[discount.type] || 'Desconto ativo no momento'}
+                            </p>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <span class="discount-value">${discount.percentage}%</span>
+                        <button class="discount-remove" 
+                                onclick="productApp.removeDiscount('${discount.id}')"
+                                title="Remover desconto"
+                                style="background: #e74c3c !important; color: white !important; border: none !important; border-radius: 50% !important; width: 32px !important; height: 32px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; margin-left: 8px !important; font-size: 14px !important; font-weight: bold !important;">
+                            ×
+                        </button>
+                    </div>
                 </div>
             `;
-        }
+        }).join('');
 
         container.innerHTML = discountHtml;
+
+        // Atualizar apenas o valor do total de desconto
+        if (totalValue) {
+            totalValue.textContent = `${limitedTotal}%`;
+            
+            // Adicionar aviso se desconto passou de 100%
+            if (totalDiscount > 100) {
+                totalValue.innerHTML = `${limitedTotal}% <small style="opacity: 0.8;">(máx.)</small>`;
+            }
+        }
+
+        // Atualizar seção de economia
+        this.updateSavingsSection();
     }
 
-    updateDiscountSummary() {
+    updateSavingsSection() {
+        const savingsSection = document.getElementById('savings-section');
+        const affectedProductsCount = document.getElementById('affected-products-count');
+        const totalSavingsAmount = document.getElementById('total-savings-amount');
+        
+        if (!savingsSection || this.activeDiscounts.length === 0) {
+            if (savingsSection) savingsSection.style.display = 'none';
+            return;
+        }
+
+        // Calcular produtos afetados e economia
         const affectedProducts = this.products.filter(p => this.calculateFinalPrice(p) < p.price);
         const totalSavings = this.products.reduce((sum, p) => sum + (p.price - this.calculateFinalPrice(p)), 0);
 
-        document.getElementById('produtos-com-desconto').textContent = affectedProducts.length;
-        document.getElementById('economia-total').textContent = `R$ ${totalSavings.toFixed(2)}`;
+        // Atualizar valores
+        if (affectedProductsCount) {
+            affectedProductsCount.textContent = affectedProducts.length;
+        }
+        
+        if (totalSavingsAmount) {
+            totalSavingsAmount.textContent = `R$ ${totalSavings.toFixed(2)}`;
+        }
+
+        // Mostrar seção
+        savingsSection.style.display = 'block';
     }
 
     getFilteredProducts() {

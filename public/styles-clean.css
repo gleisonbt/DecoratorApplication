@@ -340,7 +340,36 @@ body {
     border: 1px solid var(--gray-200);
     transition: var(--transition);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
+}
+
+/* Post-it de desconto */
+.discount-post-it {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: linear-gradient(135deg, #ff6b6b, #ff5252);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+    transform: rotate(5deg);
+    border: 2px solid white;
+    cursor: pointer;
+}
+
+.discount-post-it:hover {
+    transform: rotate(0deg) scale(1.05);
+    transition: all 0.3s ease;
+}
+
+.discount-percentage {
+    display: block;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    font-size: 0.85rem;
 }
 
 .product-card::before {
@@ -385,10 +414,45 @@ body {
 }
 
 .product-price {
+    margin: 1rem 0;
+}
+
+/* Formatação de preços melhorada */
+.price-with-discount {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.original-price {
+    font-size: 0.9rem;
+    color: var(--gray-500);
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+
+.final-price {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #27ae60;
+    text-shadow: 0 1px 2px rgba(39, 174, 96, 0.2);
+}
+
+.savings-amount {
+    font-size: 0.8rem;
+    color: #27ae60;
+    font-weight: 600;
+    background: rgba(39, 174, 96, 0.1);
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    display: inline-block;
+    width: fit-content;
+}
+
+.current-price {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--success);
-    margin: 1rem 0;
+    color: var(--gray-700);
 }
 
 .product-actions {
@@ -669,5 +733,250 @@ body {
     
     .nav-item {
         padding: 1rem 0.5rem;
+    }
+}
+
+/* Seção de descontos ativos melhorada */
+.discount-status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.discount-status-header h3 {
+    margin: 0;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.total-discount {
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, var(--success-color), #27ae60);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.total-discount.show-total {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.total-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.total-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+/* Estado vazio de descontos */
+.no-discounts-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--gray-500);
+}
+
+.empty-discount-icon {
+    font-size: 3rem;
+    color: var(--gray-300);
+    margin-bottom: 1rem;
+}
+
+.no-discounts-state h4 {
+    color: var(--gray-600);
+    margin-bottom: 0.5rem;
+}
+
+.no-discounts-state p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Cards de desconto ativos */
+.discount-card {
+    background: white;
+    border: 2px solid var(--primary-color);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.discount-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.discount-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.discount-type-badge {
+    background: #007bff !important;
+    color: white !important;
+    padding: 0.3rem 0.8rem !important;
+    border-radius: 20px !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.discount-details {
+    flex: 1;
+}
+
+.discount-title {
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 0.2rem;
+}
+
+.discount-description {
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    margin: 0;
+}
+
+.discount-value {
+    background: var(--success-color);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-right: 0.5rem;
+}
+
+.discount-remove {
+    background: #e74c3c !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 50% !important;
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.discount-remove:hover {
+    background: #c0392b;
+    transform: scale(1.1);
+}
+
+/* Seção de economia */
+.savings-section {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 10px;
+    border: 1px solid var(--gray-200);
+}
+
+.savings-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.75rem;
+}
+
+.savings-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.savings-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.savings-label {
+    font-size: 0.9rem;
+    color: var(--gray-600);
+}
+
+.savings-number {
+    font-weight: 600;
+    color: var(--primary-color);
+    background: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 15px;
+    border: 1px solid var(--primary-color);
+}
+
+.savings-money {
+    font-weight: 700;
+    color: var(--success-color);
+    font-size: 1.1rem;
+}
+
+/* Animações para os descontos */
+@keyframes slideInDiscount {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.discount-card {
+    animation: slideInDiscount 0.4s ease-out;
+}
+
+/* Responsividade para descontos */
+@media (max-width: 768px) {
+    .discount-status-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .savings-content {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .discount-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .discount-info {
+        width: 100%;
     }
 }
