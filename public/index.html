@@ -3,161 +3,511 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Gerenciamento de Produtos</title>
+    <title>Sistema de Gerenciamento de Produtos - Decorator Pattern</title>
+    <meta name="description" content="Sistema para gerenciar produtos com aplicação do padrão Decorator para cálculo de descontos">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel    <!-- Sistema de notificações melhorado -->
+    <div id=\"toast-container\" class=\"toast-container\" aria-live=\"polite\" aria-label=\"Notificações\"></div>
+
+    <!-- Sistema de ajuda e documentação -->
+    <div id=\"help-panel\" class=\"help-panel hidden\" role=\"dialog\" aria-labelledby=\"help-title\">
+        <div class=\"help-header\">
+            <h3 id=\"help-title\">
+                <i class=\"fas fa-question-circle\"></i>
+                Ajuda e Documentação
+            </h3>
+            <button class=\"help-close\" id=\"help-close\" aria-label=\"Fechar ajuda\">
+                <i class=\"fas fa-times\"></i>
+            </button>
+        </div>
+        <div class=\"help-content\">
+            <div class=\"help-search\">
+                <input type=\"text\" id=\"help-search\" class=\"input\" placeholder=\"Buscar na ajuda...\" aria-label=\"Buscar ajuda\">
+            </div>
+            <div class=\"help-topics\">
+                <div class=\"help-topic\" data-topic=\"produtos\">
+                    <h4><i class=\"fas fa-box\"></i> Gerenciar Produtos</h4>
+                    <ul>
+                        <li><strong>Adicionar:</strong> Clique em "Adicionar Produto" ou use Ctrl+N</li>
+                        <li><strong>Editar:</strong> Clique no ícone de lápis no produto</li>
+                        <li><strong>Remover:</strong> Clique no ícone de lixeira</li>
+                        <li><strong>Filtrar:</strong> Use os filtros acima da lista</li>
+                    </ul>
+                </div>
+                <div class=\"help-topic\" data-topic=\"descontos\">
+                    <h4><i class=\"fas fa-tags\"></i> Sistema de Descontos</h4>
+                    <ul>
+                        <li><strong>Categoria:</strong> Aplica desconto apenas à categoria selecionada</li>
+                        <li><strong>Cupom:</strong> Aplica desconto a todos os produtos</li>
+                        <li><strong>Cumulativo:</strong> Descontos são aplicados em sequência</li>
+                        <li><strong>Preview:</strong> Use "Visualizar" para ver o efeito</li>
+                    </ul>
+                </div>
+                <div class=\"help-topic\" data-topic=\"atalhos\">
+                    <h4><i class=\"fas fa-keyboard\"></i> Atalhos do Teclado</h4>
+                    <ul>
+                        <li><kbd>Ctrl + N</kbd> - Adicionar produto</li>
+                        <li><kbd>Ctrl + S</kbd> - Salvar (no modal)</li>
+                        <li><kbd>ESC</kbd> - Fechar modal/painel</li>
+                        <li><kbd>F1</kbd> - Abrir ajuda</li>
+                        <li><kbd>/</kbd> - Focar na busca</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmação reutilizável -->
+    <div id=\"confirm-modal\" class=\"modal\" role=\"dialog\" aria-labelledby=\"confirm-title\">
+        <div class=\"modal-backdrop\"></div>
+        <div class=\"modal-content modal-sm\">
+            <div class=\"modal-header\">
+                <h3 id=\"confirm-title\">Confirmar Ação</h3>
+            </div>
+            <div class=\"modal-body\">
+                <div class=\"confirm-icon\">
+                    <i class=\"fas fa-question-circle\"></i>
+                </div>
+                <p id=\"confirm-message\">Tem certeza que deseja continuar?</p>
+            </div>
+            <div class=\"modal-footer\">
+                <button type=\"button\" class=\"btn btn-secondary\" id=\"confirm-cancel\">Cancelar</button>
+                <button type=\"button\" class=\"btn btn-danger\" id=\"confirm-ok\">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading overlay melhorado -->
+    <div id=\"loading\" class=\"loading hidden\" role=\"status\" aria-label=\"Carregando\">
+        <div class=\"loading-content\">
+            <div class=\"spinner\"></div>
+            <p id=\"loading-message\">Carregando...</p>
+            <div class=\"loading-progress hidden\">
+                <div class=\"progress-bar\">
+                    <div class=\"progress-fill\" id=\"loading-progress-fill\"></div>
+                </div>
+                <span class=\"progress-text\" id=\"loading-progress-text\">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip container -->
+    <div id=\"tooltip\" class=\"tooltip hidden\" role=\"tooltip\"></div>
+
+    <script src=\"app.js\"></script>
+</body>
+</html>">
 </head>
 <body>
-    <!-- Header com navegação -->
+    <!-- Indicador de status da conexão -->
+    <div id="connection-status" class="connection-status hidden">
+        <i class="fas fa-wifi"></i>
+        <span>Verificando conexão...</span>
+    </div>
+
+    <!-- Header com navegação e status -->
     <header class="header">
         <div class="container">
             <div class="header-content">
-                <h1 class="logo">
-                    <i class="fas fa-shopping-cart"></i>
-                    Sistema de Produtos
-                </h1>
-                <nav class="nav">
-                    <button class="nav-btn active" data-section="produtos">
-                        <i class="fas fa-box"></i>
-                        Produtos
-                    </button>
-                    <button class="nav-btn" data-section="descontos">
-                        <i class="fas fa-tags"></i>
-                        Descontos
-                    </button>
-                    <button class="nav-btn" data-section="estatisticas">
-                        <i class="fas fa-chart-bar"></i>
-                        Estatísticas
-                    </button>
-                </nav>
+                <div class="header-left">
+                    <h1 class="logo">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Sistema de Produtos</span>
+                        <small class="version">v2.0</small>
+                    </h1>
+                    <!-- Breadcrumb para orientação -->
+                    <nav class="breadcrumb" aria-label="Navegação estrutural">
+                        <span class="breadcrumb-item current" id="breadcrumb-current">Produtos</span>
+                    </nav>
+                </div>
+                <div class="header-right">
+                    <!-- Status do sistema -->
+                    <div class="system-status" id="system-status">
+                        <i class="fas fa-circle status-indicator" title="Status do sistema"></i>
+                        <span class="status-text">Online</span>
+                    </div>
+                    <!-- Menu de ações rápidas -->
+                    <div class="quick-actions">
+                        <button class="btn-icon" id="btn-help" title="Ajuda e documentação (F1)" aria-label="Abrir ajuda">
+                            <i class="fas fa-question-circle"></i>
+                        </button>
+                        <button class="btn-icon" id="btn-settings" title="Configurações" aria-label="Abrir configurações">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
+            <!-- Navegação principal com indicadores -->
+            <nav class="nav" role="navigation" aria-label="Navegação principal">
+                <button class="nav-btn active" data-section="produtos" aria-pressed="true">
+                    <i class="fas fa-box"></i>
+                    <span>Produtos</span>
+                    <span class="nav-badge" id="produtos-badge">0</span>
+                </button>
+                <button class="nav-btn" data-section="descontos" aria-pressed="false">
+                    <i class="fas fa-tags"></i>
+                    <span>Descontos</span>
+                    <span class="nav-badge discount-active hidden" id="descontos-badge">!</span>
+                </button>
+                <button class="nav-btn" data-section="estatisticas" aria-pressed="false">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Relatórios</span>
+                </button>
+            </nav>
         </div>
     </header>
 
-    <!-- Área principal -->
-    <main class="main">
+    <!-- Área principal com landmarks semânticos -->
+    <main class="main" role="main">
         <div class="container">
-            <!-- Seção de Produtos -->
-            <section id="produtos" class="section active">
+            <!-- Seção de Produtos com melhor UX -->
+            <section id="produtos" class="section active" aria-labelledby="produtos-title">
                 <div class="section-header">
-                    <h2>
-                        <i class="fas fa-box"></i>
-                        Gerenciamento de Produtos
-                    </h2>
-                    <button class="btn btn-primary" id="btn-adicionar">
-                        <i class="fas fa-plus"></i>
-                        Adicionar Produto
-                    </button>
+                    <div class="section-title-group">
+                        <h2 id="produtos-title">
+                            <i class="fas fa-box"></i>
+                            Gerenciamento de Produtos
+                        </h2>
+                        <p class="section-description">Adicione, edite e gerencie seus produtos de forma fácil e intuitiva.</p>
+                    </div>
+                    <div class="section-actions">
+                        <button class="btn btn-primary" id="btn-adicionar" data-tooltip="Adicionar novo produto (Ctrl+N)">
+                            <i class="fas fa-plus"></i>
+                            <span>Adicionar Produto</span>
+                        </button>
+                        <!-- Ações em lote -->
+                        <div class="bulk-actions hidden" id="bulk-actions">
+                            <span class="bulk-count">0 selecionados</span>
+                            <button class="btn btn-secondary btn-sm" id="btn-bulk-delete">
+                                <i class="fas fa-trash"></i>
+                                Remover selecionados
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Filtros -->
-                <div class="filters">
-                    <div class="filter-group">
-                        <label for="filtro-categoria">Categoria:</label>
-                        <select id="filtro-categoria" class="input">
-                            <option value="">Todas as categorias</option>
-                            <option value="eletronicos">Eletrônicos</option>
-                            <option value="livros">Livros</option>
-                            <option value="alimentos">Alimentos</option>
-                        </select>
+                <!-- Filtros melhorados com validação visual -->
+                <div class="filters-container">
+                    <div class="filters" role="search" aria-label="Filtrar produtos">
+                        <div class="filter-group">
+                            <label for="filtro-categoria" class="filter-label">
+                                <i class="fas fa-filter"></i>
+                                Categoria:
+                            </label>
+                            <select id="filtro-categoria" class="input select-with-icon" aria-describedby="categoria-help">
+                                <option value="">📂 Todas as categorias</option>
+                                <option value="eletronicos">⚡ Eletrônicos</option>
+                                <option value="livros">📚 Livros</option>
+                                <option value="alimentos">🍎 Alimentos</option>
+                            </select>
+                            <small id="categoria-help" class="help-text">Filtre produtos por categoria</small>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filtro-busca" class="filter-label">
+                                <i class="fas fa-search"></i>
+                                Buscar:
+                            </label>
+                            <div class="search-container">
+                                <input type="text" id="filtro-busca" class="input search-input" 
+                                       placeholder="Digite o nome do produto..." 
+                                       aria-describedby="busca-help"
+                                       autocomplete="off">
+                                <button class="search-clear hidden" id="search-clear" title="Limpar busca">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <small id="busca-help" class="help-text">Busque por nome do produto</small>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filtro-preco" class="filter-label">
+                                <i class="fas fa-dollar-sign"></i>
+                                Faixa de preço:
+                            </label>
+                            <div class="price-range">
+                                <input type="number" id="preco-min" class="input input-sm" placeholder="Min" min="0" step="0.01">
+                                <span class="price-separator">até</span>
+                                <input type="number" id="preco-max" class="input input-sm" placeholder="Max" min="0" step="0.01">
+                            </div>
+                        </div>
+                        <div class="filter-actions">
+                            <button class="btn btn-secondary" id="btn-limpar-filtros" title="Limpar todos os filtros">
+                                <i class="fas fa-times"></i>
+                                <span>Limpar</span>
+                            </button>
+                            <button class="btn btn-outline" id="btn-filtros-avancados" title="Mais opções de filtro">
+                                <i class="fas fa-sliders-h"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="filter-group">
-                        <label for="filtro-busca">Buscar:</label>
-                        <input type="text" id="filtro-busca" class="input" placeholder="Nome do produto...">
-                    </div>
-                    <button class="btn btn-secondary" id="btn-limpar-filtros">
-                        <i class="fas fa-times"></i>
-                        Limpar
-                    </button>
+                    <!-- Indicador de filtros ativos -->
+                    <div class="active-filters" id="active-filters"></div>
                 </div>
 
-                <!-- Lista de produtos -->
+                <!-- Lista de produtos melhorada -->
                 <div class="products-container">
-                    <div class="products-header">
-                        <span id="produtos-count" class="product-count">0 produto(s) encontrado(s)</span>
+                    <div class="products-toolbar">
+                        <div class="products-info">
+                            <span id="produtos-count" class="product-count">0 produto(s) encontrado(s)</span>
+                            <span class="filter-status" id="filter-status"></span>
+                        </div>
+                        <div class="view-controls">
+                            <label class="view-label">Visualização:</label>
+                            <div class="view-toggle" role="radiogroup" aria-label="Tipo de visualização">
+                                <button class="view-btn active" data-view="grid" title="Visualização em grade" aria-pressed="true">
+                                    <i class="fas fa-th"></i>
+                                </button>
+                                <button class="view-btn" data-view="list" title="Visualização em lista" aria-pressed="false">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                            </div>
+                            <div class="sort-controls">
+                                <label for="sort-select" class="sort-label">Ordenar por:</label>
+                                <select id="sort-select" class="input input-sm">
+                                    <option value="name-asc">Nome (A-Z)</option>
+                                    <option value="name-desc">Nome (Z-A)</option>
+                                    <option value="price-asc">Preço (menor)</option>
+                                    <option value="price-desc">Preço (maior)</option>
+                                    <option value="category-asc">Categoria</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div id="produtos-lista" class="products-grid">
+                    
+                    <!-- Loading state com melhor feedback -->
+                    <div id="products-loading" class="loading-state hidden">
+                        <div class="spinner"></div>
+                        <p>Carregando produtos...</p>
+                    </div>
+                    
+                    <div id="produtos-lista" class="products-grid" role="grid" aria-label="Lista de produtos">
                         <!-- Produtos serão inseridos aqui -->
                     </div>
+                    
+                    <!-- Estados vazios mais informativos -->
                     <div id="produtos-vazio" class="empty-state hidden">
-                        <i class="fas fa-box-open"></i>
+                        <div class="empty-icon">
+                            <i class="fas fa-box-open"></i>
+                        </div>
                         <h3>Nenhum produto encontrado</h3>
-                        <p>Adicione produtos ou ajuste os filtros para ver resultados.</p>
+                        <p>Não encontramos produtos que correspondam aos seus critérios de busca.</p>
+                        <div class="empty-actions">
+                            <button class="btn btn-primary" id="btn-adicionar-empty">
+                                <i class="fas fa-plus"></i>
+                                Adicionar primeiro produto
+                            </button>
+                            <button class="btn btn-outline" id="btn-limpar-filtros-empty">
+                                <i class="fas fa-filter"></i>
+                                Limpar filtros
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Estado de erro -->
+                    <div id="produtos-erro" class="error-state hidden">
+                        <div class="error-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3>Erro ao carregar produtos</h3>
+                        <p id="error-message">Ocorreu um problema ao carregar os produtos. Verifique sua conexão.</p>
+                        <div class="error-actions">
+                            <button class="btn btn-primary" id="btn-retry">
+                                <i class="fas fa-sync-alt"></i>
+                                Tentar novamente
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Seção de Descontos -->
-            <section id="descontos" class="section">
+            <!-- Seção de Descontos melhorada -->
+            <section id="descontos" class="section" aria-labelledby="descontos-title">
                 <div class="section-header">
-                    <h2>
-                        <i class="fas fa-tags"></i>
-                        Sistema de Descontos
-                    </h2>
+                    <div class="section-title-group">
+                        <h2 id="descontos-title">
+                            <i class="fas fa-tags"></i>
+                            Sistema de Descontos
+                        </h2>
+                        <p class="section-description">Configure descontos por categoria ou aplique cupons universais. Os descontos são aplicados de forma cumulativa.</p>
+                    </div>
+                    <div class="section-actions">
+                        <button class="btn btn-outline" id="btn-preview-descontos" title="Visualizar efeito dos descontos">
+                            <i class="fas fa-eye"></i>
+                            Preview
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Alerta sobre descontos ativos -->
+                <div class="alert alert-info" id="discount-info" style="display: none;">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="alert-content">
+                        <strong>Descontos Ativos:</strong>
+                        <span id="discount-summary"></span>
+                    </div>
                 </div>
 
                 <div class="discount-panel">
-                    <div class="discount-card">
-                        <h3>
-                            <i class="fas fa-percentage"></i>
-                            Desconto por Categoria
-                        </h3>
-                        <p>Aplique desconto para produtos de uma categoria específica</p>
-                        <div class="form-group">
-                            <label for="desconto-categoria">Categoria:</label>
-                            <select id="desconto-categoria" class="input">
-                                <option value="eletronicos">Eletrônicos</option>
-                                <option value="livros">Livros</option>
-                                <option value="alimentos">Alimentos</option>
-                            </select>
+                    <div class="discount-card enhanced">
+                        <div class="card-header">
+                            <h3>
+                                <i class="fas fa-percentage"></i>
+                                Desconto por Categoria
+                            </h3>
+                            <div class="card-status" id="category-discount-status">
+                                <span class="status-badge status-inactive">Inativo</span>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="desconto-percentual">Percentual (%):</label>
-                            <input type="number" id="desconto-percentual" class="input" min="0" max="100" step="1" placeholder="Ex: 10">
-                        </div>
-                        <button class="btn btn-success" id="btn-aplicar-categoria">
-                            <i class="fas fa-tag"></i>
-                            Aplicar Desconto
-                        </button>
+                        <p class="card-description">Aplique desconto específico para produtos de uma categoria. Este desconto será aplicado apenas aos produtos da categoria selecionada.</p>
+                        
+                        <form class="discount-form" id="form-categoria">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="desconto-categoria" class="form-label required">
+                                        <i class="fas fa-tag"></i>
+                                        Categoria:
+                                    </label>
+                                    <select id="desconto-categoria" class="input" required aria-describedby="categoria-discount-help">
+                                        <option value="">Selecione uma categoria</option>
+                                        <option value="eletronicos">⚡ Eletrônicos</option>
+                                        <option value="livros">📚 Livros</option>
+                                        <option value="alimentos">🍎 Alimentos</option>
+                                    </select>
+                                    <small id="categoria-discount-help" class="help-text">Escolha a categoria que receberá o desconto</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="desconto-percentual" class="form-label required">
+                                        <i class="fas fa-percent"></i>
+                                        Percentual:
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="number" id="desconto-percentual" class="input" 
+                                               required min="1" max="99" step="1" 
+                                               placeholder="10" aria-describedby="percentual-help">
+                                        <span class="input-suffix">%</span>
+                                    </div>
+                                    <small id="percentual-help" class="help-text">Entre 1% e 99%</small>
+                                    <div class="form-feedback" id="percentual-feedback"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Preview do desconto -->
+                            <div class="discount-preview hidden" id="category-preview">
+                                <div class="preview-header">
+                                    <i class="fas fa-eye"></i>
+                                    <span>Preview do desconto:</span>
+                                </div>
+                                <div class="preview-content" id="category-preview-content"></div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-success" id="btn-aplicar-categoria">
+                                    <i class="fas fa-tag"></i>
+                                    <span>Aplicar Desconto</span>
+                                </button>
+                                <button type="button" class="btn btn-outline" id="btn-preview-categoria">
+                                    <i class="fas fa-eye"></i>
+                                    <span>Visualizar</span>
+                                </button>
+                            </div>
+                        </form>
                     </div>
 
-                    <div class="discount-card">
-                        <h3>
-                            <i class="fas fa-ticket-alt"></i>
-                            Cupom Universal
-                        </h3>
-                        <p>Aplique cupom de desconto para todos os produtos</p>
-                        <div class="form-group">
-                            <label for="cupom-percentual">Percentual (%):</label>
-                            <input type="number" id="cupom-percentual" class="input" min="0" max="100" step="1" placeholder="Ex: 5">
+                    <div class="discount-card enhanced">
+                        <div class="card-header">
+                            <h3>
+                                <i class="fas fa-ticket-alt"></i>
+                                Cupom Universal
+                            </h3>
+                            <div class="card-status" id="coupon-discount-status">
+                                <span class="status-badge status-inactive">Inativo</span>
+                            </div>
                         </div>
-                        <button class="btn btn-warning" id="btn-aplicar-cupom">
-                            <i class="fas fa-ticket-alt"></i>
-                            Aplicar Cupom
-                        </button>
+                        <p class="card-description">Aplique um cupom de desconto que será aplicado a todos os produtos, independente da categoria.</p>
+                        
+                        <form class="discount-form" id="form-cupom">
+                            <div class="form-group">
+                                <label for="cupom-percentual" class="form-label required">
+                                    <i class="fas fa-percent"></i>
+                                    Percentual do cupom:
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" id="cupom-percentual" class="input" 
+                                           required min="1" max="50" step="1" 
+                                           placeholder="5" aria-describedby="cupom-help">
+                                    <span class="input-suffix">%</span>
+                                </div>
+                                <small id="cupom-help" class="help-text">Cupons limitados a 50% para evitar valores negativos</small>
+                                <div class="form-feedback" id="cupom-feedback"></div>
+                            </div>
+                            
+                            <!-- Preview do cupom -->
+                            <div class="discount-preview hidden" id="coupon-preview">
+                                <div class="preview-header">
+                                    <i class="fas fa-eye"></i>
+                                    <span>Preview do cupom:</span>
+                                </div>
+                                <div class="preview-content" id="coupon-preview-content"></div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-warning" id="btn-aplicar-cupom">
+                                    <i class="fas fa-ticket-alt"></i>
+                                    <span>Aplicar Cupom</span>
+                                </button>
+                                <button type="button" class="btn btn-outline" id="btn-preview-cupom">
+                                    <i class="fas fa-eye"></i>
+                                    <span>Visualizar</span>
+                                </button>
+                            </div>
+                        </form>
                     </div>
 
-                    <div class="discount-card">
-                        <h3>
-                            <i class="fas fa-eraser"></i>
-                            Limpar Descontos
-                        </h3>
-                        <p>Remove todos os descontos aplicados</p>
-                        <button class="btn btn-danger" id="btn-limpar-descontos">
-                            <i class="fas fa-times-circle"></i>
-                            Remover Descontos
-                        </button>
+                    <div class="discount-card danger">
+                        <div class="card-header">
+                            <h3>
+                                <i class="fas fa-eraser"></i>
+                                Gerenciar Descontos
+                            </h3>
+                        </div>
+                        <p class="card-description">Remova todos os descontos aplicados e volte aos preços originais.</p>
+                        
+                        <div class="danger-zone">
+                            <div class="warning-message">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Esta ação removerá todos os descontos ativos</span>
+                            </div>
+                            <button class="btn btn-danger" id="btn-limpar-descontos" data-confirm="Tem certeza que deseja remover todos os descontos?">
+                                <i class="fas fa-times-circle"></i>
+                                <span>Remover Todos os Descontos</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Status dos descontos ativos -->
-                <div class="discount-status">
-                    <h3>Descontos Ativos</h3>
+                <!-- Status detalhado dos descontos -->
+                <div class="discount-status-panel">
+                    <h3>
+                        <i class="fas fa-info-circle"></i>
+                        Status dos Descontos
+                    </h3>
                     <div id="descontos-ativos" class="active-discounts">
                         <div class="no-discounts">
                             <i class="fas fa-info-circle"></i>
-                            Nenhum desconto ativo no momento
+                            <span>Nenhum desconto ativo no momento</span>
+                            <small>Configure descontos acima para começar</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Resumo de economia -->
+                    <div class="savings-summary hidden" id="savings-summary">
+                        <div class="savings-item">
+                            <span class="savings-label">Economia total estimada:</span>
+                            <span class="savings-value" id="total-savings">R$ 0,00</span>
+                        </div>
+                        <div class="savings-item">
+                            <span class="savings-label">Produtos afetados:</span>
+                            <span class="savings-value" id="affected-products">0</span>
                         </div>
                     </div>
                 </div>
@@ -229,43 +579,124 @@
         </div>
     </main>
 
-    <!-- Modal para adicionar/editar produto -->
-    <div id="modal-produto" class="modal">
+    <!-- Modal melhorado para adicionar/editar produto -->
+    <div id="modal-produto" class="modal" role="dialog" aria-labelledby="modal-titulo" aria-modal="true">
+        <div class="modal-backdrop" aria-hidden="true"></div>
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modal-titulo">Adicionar Produto</h3>
-                <button class="modal-close" id="modal-fechar">
+                <div class="modal-progress">
+                    <div class="progress-bar" id="modal-progress"></div>
+                </div>
+                <button class="modal-close" id="modal-fechar" aria-label="Fechar modal" title="Fechar (ESC)">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <form id="form-produto" class="modal-body">
-                <div class="form-group">
-                    <label for="produto-nome">Nome do Produto *</label>
-                    <input type="text" id="produto-nome" class="input" required placeholder="Digite o nome do produto">
-                    <span class="error-message" id="erro-nome"></span>
+            
+            <form id="form-produto" class="modal-body" novalidate>
+                <div class="form-step active" data-step="1">
+                    <div class="form-group">
+                        <label for="produto-nome" class="form-label required">
+                            <i class="fas fa-tag"></i>
+                            Nome do Produto
+                        </label>
+                        <input type="text" id="produto-nome" class="input" 
+                               required minlength="2" maxlength="100"
+                               placeholder="Digite um nome descritivo para o produto"
+                               aria-describedby="nome-help nome-error">
+                        <small id="nome-help" class="help-text">
+                            <i class="fas fa-info-circle"></i>
+                            O nome deve ter entre 2 e 100 caracteres
+                        </small>
+                        <div class="form-feedback" id="nome-error" role="alert"></div>
+                        <div class="character-count">
+                            <span id="nome-count">0</span>/100
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="produto-categoria" class="form-label required">
+                            <i class="fas fa-folder"></i>
+                            Categoria
+                        </label>
+                        <select id="produto-categoria" class="input" required aria-describedby="categoria-modal-help categoria-error">
+                            <option value="">Selecione uma categoria</option>
+                            <option value="eletronicos">⚡ Eletrônicos</option>
+                            <option value="livros">📚 Livros</option>
+                            <option value="alimentos">🍎 Alimentos</option>
+                        </select>
+                        <small id="categoria-modal-help" class="help-text">
+                            <i class="fas fa-info-circle"></i>
+                            A categoria ajuda na organização e aplicação de descontos
+                        </small>
+                        <div class="form-feedback" id="categoria-error" role="alert"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="produto-preco" class="form-label required">
+                            <i class="fas fa-dollar-sign"></i>
+                            Preço
+                        </label>
+                        <div class="input-group">
+                            <span class="input-prefix">R$</span>
+                            <input type="number" id="produto-preco" class="input" 
+                                   required min="0.01" max="999999.99" step="0.01" 
+                                   placeholder="0,00" aria-describedby="preco-help preco-error">
+                        </div>
+                        <small id="preco-help" class="help-text">
+                            <i class="fas fa-info-circle"></i>
+                            Digite o preço em reais (ex: 29,90)
+                        </small>
+                        <div class="form-feedback" id="preco-error" role="alert"></div>
+                    </div>
+                    
+                    <!-- Preview do produto -->
+                    <div class="product-preview hidden" id="product-preview">
+                        <h4>
+                            <i class="fas fa-eye"></i>
+                            Preview do produto:
+                        </h4>
+                        <div class="preview-card" id="preview-content">
+                            <!-- Preview será inserido aqui -->
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="produto-categoria">Categoria *</label>
-                    <select id="produto-categoria" class="input" required>
-                        <option value="">Selecione uma categoria</option>
-                        <option value="eletronicos">Eletrônicos</option>
-                        <option value="livros">Livros</option>
-                        <option value="alimentos">Alimentos</option>
-                    </select>
-                    <span class="error-message" id="erro-categoria"></span>
-                </div>
-                <div class="form-group">
-                    <label for="produto-preco">Preço (R$) *</label>
-                    <input type="number" id="produto-preco" class="input" required min="0.01" step="0.01" placeholder="0,00">
-                    <span class="error-message" id="erro-preco"></span>
+                
+                <!-- Indicadores de validação -->
+                <div class="validation-summary" id="validation-summary">
+                    <div class="validation-item" data-field="nome">
+                        <i class="fas fa-circle validation-icon"></i>
+                        <span>Nome do produto</span>
+                    </div>
+                    <div class="validation-item" data-field="categoria">
+                        <i class="fas fa-circle validation-icon"></i>
+                        <span>Categoria</span>
+                    </div>
+                    <div class="validation-item" data-field="preco">
+                        <i class="fas fa-circle validation-icon"></i>
+                        <span>Preço</span>
+                    </div>
                 </div>
             </form>
+            
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="btn-cancelar">Cancelar</button>
-                <button type="submit" form="form-produto" class="btn btn-primary" id="btn-salvar">
-                    <i class="fas fa-save"></i>
-                    Salvar
-                </button>
+                <div class="modal-actions-left">
+                    <button type="button" class="btn btn-text" id="btn-preview-produto">
+                        <i class="fas fa-eye"></i>
+                        <span>Visualizar</span>
+                    </button>
+                </div>
+                <div class="modal-actions-right">
+                    <button type="button" class="btn btn-secondary" id="btn-cancelar">
+                        <span>Cancelar</span>
+                        <small>(ESC)</small>
+                    </button>
+                    <button type="submit" form="form-produto" class="btn btn-primary" id="btn-salvar" disabled>
+                        <i class="fas fa-save"></i>
+                        <span>Salvar Produto</span>
+                        <small>(Ctrl+S)</small>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
