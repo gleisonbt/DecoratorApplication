@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gerenciamento de Produtos</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header com navegação -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="fas fa-shopping-cart"></i>
+                    Sistema de Produtos
+                </h1>
+                <nav class="nav">
+                    <button class="nav-btn active" data-section="produtos">
+                        <i class="fas fa-box"></i>
+                        Produtos
+                    </button>
+                    <button class="nav-btn" data-section="descontos">
+                        <i class="fas fa-tags"></i>
+                        Descontos
+                    </button>
+                    <button class="nav-btn" data-section="estatisticas">
+                        <i class="fas fa-chart-bar"></i>
+                        Estatísticas
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Área principal -->
+    <main class="main">
+        <div class="container">
+            <!-- Seção de Produtos -->
+            <section id="produtos" class="section active">
+                <div class="section-header">
+                    <h2>
+                        <i class="fas fa-box"></i>
+                        Gerenciamento de Produtos
+                    </h2>
+                    <button class="btn btn-primary" id="btn-adicionar">
+                        <i class="fas fa-plus"></i>
+                        Adicionar Produto
+                    </button>
+                </div>
+
+                <!-- Filtros -->
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="filtro-categoria">Categoria:</label>
+                        <select id="filtro-categoria" class="input">
+                            <option value="">Todas as categorias</option>
+                            <option value="eletronicos">Eletrônicos</option>
+                            <option value="livros">Livros</option>
+                            <option value="alimentos">Alimentos</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filtro-busca">Buscar:</label>
+                        <input type="text" id="filtro-busca" class="input" placeholder="Nome do produto...">
+                    </div>
+                    <button class="btn btn-secondary" id="btn-limpar-filtros">
+                        <i class="fas fa-times"></i>
+                        Limpar
+                    </button>
+                </div>
+
+                <!-- Lista de produtos -->
+                <div class="products-container">
+                    <div id="produtos-lista" class="products-grid">
+                        <!-- Produtos serão inseridos aqui -->
+                    </div>
+                    <div id="produtos-vazio" class="empty-state hidden">
+                        <i class="fas fa-box-open"></i>
+                        <h3>Nenhum produto encontrado</h3>
+                        <p>Adicione produtos ou ajuste os filtros para ver resultados.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção de Descontos -->
+            <section id="descontos" class="section">
+                <div class="section-header">
+                    <h2>
+                        <i class="fas fa-tags"></i>
+                        Sistema de Descontos
+                    </h2>
+                </div>
+
+                <div class="discount-panel">
+                    <div class="discount-card">
+                        <h3>
+                            <i class="fas fa-percentage"></i>
+                            Desconto por Categoria
+                        </h3>
+                        <p>Aplique desconto para produtos de uma categoria específica</p>
+                        <div class="form-group">
+                            <label for="desconto-categoria">Categoria:</label>
+                            <select id="desconto-categoria" class="input">
+                                <option value="eletronicos">Eletrônicos</option>
+                                <option value="livros">Livros</option>
+                                <option value="alimentos">Alimentos</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="desconto-percentual">Percentual (%):</label>
+                            <input type="number" id="desconto-percentual" class="input" min="0" max="100" step="1" placeholder="Ex: 10">
+                        </div>
+                        <button class="btn btn-success" id="btn-aplicar-categoria">
+                            <i class="fas fa-tag"></i>
+                            Aplicar Desconto
+                        </button>
+                    </div>
+
+                    <div class="discount-card">
+                        <h3>
+                            <i class="fas fa-ticket-alt"></i>
+                            Cupom Universal
+                        </h3>
+                        <p>Aplique cupom de desconto para todos os produtos</p>
+                        <div class="form-group">
+                            <label for="cupom-percentual">Percentual (%):</label>
+                            <input type="number" id="cupom-percentual" class="input" min="0" max="100" step="1" placeholder="Ex: 5">
+                        </div>
+                        <button class="btn btn-warning" id="btn-aplicar-cupom">
+                            <i class="fas fa-ticket-alt"></i>
+                            Aplicar Cupom
+                        </button>
+                    </div>
+
+                    <div class="discount-card">
+                        <h3>
+                            <i class="fas fa-eraser"></i>
+                            Limpar Descontos
+                        </h3>
+                        <p>Remove todos os descontos aplicados</p>
+                        <button class="btn btn-danger" id="btn-limpar-descontos">
+                            <i class="fas fa-times-circle"></i>
+                            Remover Descontos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status dos descontos ativos -->
+                <div class="discount-status">
+                    <h3>Descontos Ativos</h3>
+                    <div id="descontos-ativos" class="active-discounts">
+                        <div class="no-discounts">
+                            <i class="fas fa-info-circle"></i>
+                            Nenhum desconto ativo no momento
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção de Estatísticas -->
+            <section id="estatisticas" class="section">
+                <div class="section-header">
+                    <h2>
+                        <i class="fas fa-chart-bar"></i>
+                        Estatísticas e Relatórios
+                    </h2>
+                    <button class="btn btn-primary" id="btn-atualizar-stats">
+                        <i class="fas fa-sync-alt"></i>
+                        Atualizar
+                    </button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="stat-total">0</h3>
+                            <p>Total de Produtos</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="stat-preco-medio">R$ 0,00</h3>
+                            <p>Preço Médio</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="stat-mais-caro">-</h3>
+                            <p>Produto Mais Caro</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="stat-mais-barato">-</h3>
+                            <p>Produto Mais Barato</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico por categoria -->
+                <div class="chart-container">
+                    <h3>Produtos por Categoria</h3>
+                    <div id="chart-categorias" class="category-chart">
+                        <!-- Gráfico será inserido aqui -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal para adicionar/editar produto -->
+    <div id="modal-produto" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-titulo">Adicionar Produto</h3>
+                <button class="modal-close" id="modal-fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="form-produto" class="modal-body">
+                <div class="form-group">
+                    <label for="produto-nome">Nome do Produto *</label>
+                    <input type="text" id="produto-nome" class="input" required placeholder="Digite o nome do produto">
+                    <span class="error-message" id="erro-nome"></span>
+                </div>
+                <div class="form-group">
+                    <label for="produto-categoria">Categoria *</label>
+                    <select id="produto-categoria" class="input" required>
+                        <option value="">Selecione uma categoria</option>
+                        <option value="eletronicos">Eletrônicos</option>
+                        <option value="livros">Livros</option>
+                        <option value="alimentos">Alimentos</option>
+                    </select>
+                    <span class="error-message" id="erro-categoria"></span>
+                </div>
+                <div class="form-group">
+                    <label for="produto-preco">Preço (R$) *</label>
+                    <input type="number" id="produto-preco" class="input" required min="0.01" step="0.01" placeholder="0,00">
+                    <span class="error-message" id="erro-preco"></span>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btn-cancelar">Cancelar</button>
+                <button type="submit" form="form-produto" class="btn btn-primary" id="btn-salvar">
+                    <i class="fas fa-save"></i>
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast para notificações -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Loading overlay -->
+    <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p>Carregando...</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

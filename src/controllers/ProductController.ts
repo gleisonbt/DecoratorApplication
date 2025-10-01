@@ -1,7 +1,10 @@
+// Models
 import { Product } from '../models/Product';
 import { Category } from '../models/Category';
-import { ProductService } from '../services/ProductService';
 import { PriceCalc } from '../models/PriceCalc';
+
+// Services
+import { ProductService } from '../services/ProductService';
 import { BasicPrice, CategoryPercentOff, CouponPercentOff } from '../services/PriceCalculators';
 
 /**
