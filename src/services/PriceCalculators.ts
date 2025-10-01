@@ -1,6 +1,5 @@
 import { PriceCalc } from '../models/PriceCalc';
-import { Product } from '../models/Product';
-import { Category } from '../models/Category';
+import { Product, Category, CategoryType } from '../models/Product';
 
 /**
  * Implementação básica da interface PriceCalc
@@ -37,10 +36,10 @@ export abstract class PriceDecorator implements PriceCalc {
  * Decorator que aplica desconto percentual para uma categoria específica
  */
 export class CategoryPercentOff extends PriceDecorator {
-    private category: Category;
+    private category: CategoryType;
     private percent: number;
 
-    constructor(inner: PriceCalc, category: Category, percent: number) {
+    constructor(inner: PriceCalc, category: CategoryType, percent: number) {
         super(inner);
         this.category = category;
         this.percent = percent;

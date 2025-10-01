@@ -1,7 +1,6 @@
 const { db } = require('../database/connection.js');
 const ProductRepository = require('../database/ProductRepository.js');
-import { Product } from '../models/Product';
-import { Category } from '../models/Category';
+import { Product, Category, CategoryType } from '../models/Product';
 
 /**
  * Serviço para gerenciamento de produtos com integração MySQL
@@ -86,7 +85,11 @@ export class ProductService {
             const result = await this.productRepository.findByName(name);
             
             if (result) {
-                return new Product(result.name, result.category as Category, parseFloat(result.price) || 0);
+                return new Product({
+                    name: result.name,
+                    category: result.category,
+                    price: parseFloat(result.price) || 0
+                });
             }
             
             return undefined;
@@ -99,13 +102,17 @@ export class ProductService {
     /**
      * Busca produtos por categoria
      */
-    async getProductsByCategory(category: Category): Promise<Product[]> {
+    async getProductsByCategory(category: CategoryType): Promise<Product[]> {
         try {
             const result = await this.productRepository.findByCategory(category);
             
             if (result.success) {
                 return result.data.map((item: any) => 
-                    new Product(item.name, item.category as Category, parseFloat(item.price) || 0)
+                    new Product({
+                        name: item.name,
+                        category: item.category,
+                        price: parseFloat(item.price) || 0
+                    })
                 );
             }
             
@@ -125,7 +132,11 @@ export class ProductService {
             
             if (result.success) {
                 return result.data.map((item: any) => 
-                    new Product(item.name, item.category as Category, parseFloat(item.price) || 0)
+                    new Product({
+                        name: item.name,
+                        category: item.category,
+                        price: parseFloat(item.price) || 0
+                    })
                 );
             }
             
@@ -173,7 +184,11 @@ export class ProductService {
             
             if (result.success) {
                 return result.data.map((item: any) => 
-                    new Product(item.name, item.category as Category, item.price)
+                    new Product({
+                        name: item.name,
+                        category: item.category,
+                        price: item.price
+                    })
                 );
             }
             
@@ -193,7 +208,11 @@ export class ProductService {
             
             if (result.success) {
                 return result.data.map((item: any) => 
-                    new Product(item.name, item.category as Category, parseFloat(item.price) || 0)
+                    new Product({
+                        name: item.name,
+                        category: item.category,
+                        price: parseFloat(item.price) || 0
+                    })
                 );
             }
             

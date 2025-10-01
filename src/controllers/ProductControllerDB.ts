@@ -1,6 +1,5 @@
 // Models
-import { Product } from '../models/Product';
-import { Category } from '../models/Category';
+import { Product, Category, CategoryType } from '../models/Product';
 import { PriceCalc } from '../models/PriceCalc';
 
 // Services
@@ -24,7 +23,7 @@ export class ProductControllerDB {
     /**
      * Adiciona um novo produto com validação e persistência
      */
-    async addProduct(name: string, category: Category, price: number): Promise<{ success: boolean; message: string; product?: Product }> {
+    async addProduct(name: string, category: CategoryType, price: number): Promise<{ success: boolean; message: string; product?: Product }> {
         try {
             // Validações básicas
             if (!name || name.trim().length === 0) {
@@ -35,12 +34,12 @@ export class ProductControllerDB {
                 return { success: false, message: 'Preço deve ser maior que zero' };
             }
 
-            if (!Object.values(Category).includes(category)) {
+            if (!Object.values(Category).includes(category as any)) {
                 return { success: false, message: 'Categoria inválida' };
             }
 
             // Criar produto e adicionar ao banco
-            const product = new Product(name.trim(), category, price);
+            const product = new Product({ name: name.trim(), category, price });
             const result = await this.productService.addProduct(product);
 
             if (result.success) {
@@ -93,7 +92,7 @@ export class ProductControllerDB {
     /**
      * Busca produtos por categoria
      */
-    async getProductsByCategory(category: Category): Promise<Product[]> {
+    async getProductsByCategory(category: CategoryType): Promise<Product[]> {
         try {
             return await this.productService.getProductsByCategory(category);
         } catch (error) {
@@ -153,7 +152,7 @@ export class ProductControllerDB {
     /**
      * Aplica desconto por categoria
      */
-    applyCategoryDiscount(category: Category, percent: number): { success: boolean; message: string } {
+    applyCategoryDiscount(category: CategoryType, percent: number): { success: boolean; message: string } {
         try {
             if (percent <= 0 || percent > 100) {
                 return { success: false, message: 'Percentual deve estar entre 1 e 100' };
@@ -279,7 +278,7 @@ export class ProductControllerDB {
                 return { success: false, message: 'Preço deve ser maior que zero' };
             }
 
-            if (updates.category !== undefined && !Object.values(Category).includes(updates.category)) {
+            if (updates.category !== undefined && !Object.values(Category).includes(updates.category as any)) {
                 return { success: false, message: 'Categoria inválida' };
             }
 
