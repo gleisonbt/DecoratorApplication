@@ -980,3 +980,97 @@ body {
         width: 100%;
     }
 }
+
+/* Sistema de Feedback de Filtros (Padrão Decorator) */
+.filter-feedback-container {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: var(--gray-50);
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--primary-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.filter-feedback {
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.filter-feedback.filter-inactive {
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border: 1px solid var(--gray-200);
+}
+
+.filter-feedback.filter-active {
+    background: linear-gradient(135deg, var(--primary-color), #0056b3);
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+    border: 1px solid var(--primary-color);
+}
+
+.filter-feedback.filter-active::before {
+    content: '🔍 ';
+    margin-right: 0.5rem;
+}
+
+.filter-feedback.filter-inactive::before {
+    content: '📋 ';
+    margin-right: 0.5rem;
+}
+
+/* Botão para filtrar apenas produtos com desconto */
+#btn-only-discounts {
+    background: var(--warning-color) !important;
+    border: none !important;
+    color: white !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 20px !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+#btn-only-discounts:hover {
+    background: #d39e00 !important;
+    transform: scale(1.05) !important;
+}
+
+#btn-only-discounts.active {
+    background: var(--success-color) !important;
+}
+
+#btn-only-discounts.active::before {
+    content: '✓ ';
+}
+
+/* Animação para mudança de filtros */
+@keyframes filterChange {
+    0% { opacity: 0.5; transform: scale(0.95); }
+    50% { opacity: 0.7; transform: scale(1.02); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.filter-feedback.filter-active {
+    animation: filterChange 0.5s ease-out;
+}
+
+/* Responsividade para feedback de filtros */
+@media (max-width: 768px) {
+    .filter-feedback-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .filter-feedback {
+        text-align: center;
+    }
+}

@@ -1,7 +1,229 @@
-    /**
+/**
  * Sistema de Gerenciamento de Produtos - Interface Web com Banco de Dados
  * Implementa as Heurísticas de Usabilidade de Nielsen
+ * Agora com Sistema de Filtros usando Padrão Decorator
  */
+
+// === PADRÃO DECORATOR PARA FILTROS ===
+
+/**
+ * Interface base para filtros de produtos (simulada em JavaScript)
+ */
+class ProductFilter {
+    filter(products) {
+        throw new Error('Método filter deve ser implementado');
+    }
+    
+    getDescription() {
+        throw new Error('Método getDescription deve ser implementado');
+    }
+}
+
+/**
+ * Filtro base - não aplica nenhuma filtragem
+ */
+class BaseFilter extends ProductFilter {
+    filter(products) {
+        return [...products]; // Retorna cópia de todos os produtos
+    }
+    
+    getDescription() {
+        return 'Filtro base (sem filtragem)';
+    }
+}
+
+/**
+ * Decorator abstrato base para filtros
+ */
+class FilterDecorator extends ProductFilter {
+    constructor(filter) {
+        super();
+        this.wrappedFilter = filter;
+    }
+    
+    filter(products) {
+        // Aplica primeiro o filtro wrapeado, depois o próprio filtro
+        const filteredByWrapped = this.wrappedFilter.filter(products);
+        return this.applyFilter(filteredByWrapped);
+    }
+    
+    getDescription() {
+        return `${this.wrappedFilter.getDescription()} + ${this.getOwnDescription()}`;
+    }
+    
+    // Métodos abstratos que devem ser implementados pelos decorators concretos
+    applyFilter(products) {
+        throw new Error('Método applyFilter deve ser implementado');
+    }
+    
+    getOwnDescription() {
+        throw new Error('Método getOwnDescription deve ser implementado');
+    }
+}
+
+/**
+ * Decorator para filtrar produtos por categoria
+ */
+class CategoryFilter extends FilterDecorator {
+    constructor(filter, category = null) {
+        super(filter);
+        this.category = category;
+    }
+    
+    setCategory(category) {
+        this.category = category;
+    }
+    
+    applyFilter(products) {
+        if (!this.category) {
+            return products; // Sem categoria selecionada, retorna todos
+        }
+        
+        return products.filter(product => product.category === this.category);
+    }
+    
+    getOwnDescription() {
+        return this.category ? `Categoria: ${this.category}` : 'Categoria: Todas';
+    }
+}
+
+/**
+ * Decorator para filtrar produtos por busca textual
+ */
+class SearchFilter extends FilterDecorator {
+    constructor(filter, searchTerm = '') {
+        super(filter);
+        this.searchTerm = searchTerm.toLowerCase();
+    }
+    
+    setSearchTerm(searchTerm) {
+        this.searchTerm = searchTerm.toLowerCase();
+    }
+    
+    applyFilter(products) {
+        if (!this.searchTerm.trim()) {
+            return products; // Sem termo de busca, retorna todos
+        }
+        
+        return products.filter(product => {
+            const nameMatch = product.name.toLowerCase().includes(this.searchTerm);
+            const descriptionMatch = product.description?.toLowerCase().includes(this.searchTerm) || false;
+            
+            return nameMatch || descriptionMatch;
+        });
+    }
+    
+    getOwnDescription() {
+        return this.searchTerm ? `Busca: "${this.searchTerm}"` : 'Busca: Vazia';
+    }
+}
+
+/**
+ * Decorator para filtrar produtos por faixa de preço
+ */
+class PriceRangeFilter extends FilterDecorator {
+    constructor(filter, minPrice = 0, maxPrice = Number.MAX_VALUE) {
+        super(filter);
+        this.minPrice = minPrice;
+        this.maxPrice = maxPrice;
+    }
+    
+    setPriceRange(minPrice, maxPrice) {
+        this.minPrice = minPrice;
+        this.maxPrice = maxPrice;
+    }
+    
+    applyFilter(products) {
+        return products.filter(product => 
+            product.price >= this.minPrice && product.price <= this.maxPrice
+        );
+    }
+    
+    getOwnDescription() {
+        if (this.minPrice === 0 && this.maxPrice === Number.MAX_VALUE) {
+            return 'Preço: Todos';
+        }
+        return `Preço: R$ ${this.minPrice.toFixed(2)} - R$ ${this.maxPrice.toFixed(2)}`;
+    }
+}
+
+/**
+ * Decorator para filtrar produtos com desconto
+ */
+class DiscountFilter extends FilterDecorator {
+    constructor(filter, onlyWithDiscount = false, priceCalculatorFn = null) {
+        super(filter);
+        this.onlyWithDiscount = onlyWithDiscount;
+        this.priceCalculatorFn = priceCalculatorFn;
+    }
+    
+    setDiscountFilter(onlyWithDiscount) {
+        this.onlyWithDiscount = onlyWithDiscount;
+    }
+    
+    setPriceCalculator(priceCalculatorFn) {
+        this.priceCalculatorFn = priceCalculatorFn;
+    }
+    
+    applyFilter(products) {
+        if (!this.onlyWithDiscount || !this.priceCalculatorFn) {
+            return products; // Sem filtro de desconto
+        }
+        
+        return products.filter(product => {
+            const finalPrice = this.priceCalculatorFn(product);
+            return finalPrice < product.price; // Tem desconto se preço final < preço original
+        });
+    }
+    
+    getOwnDescription() {
+        return this.onlyWithDiscount ? 'Apenas com desconto' : 'Todos os produtos';
+    }
+}
+
+/**
+ * Factory para criar filtros compostos
+ */
+class FilterFactory {
+    static createCategoryAndSearchFilter(category, searchTerm) {
+        let filter = new BaseFilter();
+        
+        if (category) {
+            filter = new CategoryFilter(filter, category);
+        }
+        
+        if (searchTerm?.trim()) {
+            filter = new SearchFilter(filter, searchTerm);
+        }
+        
+        return filter;
+    }
+    
+    static createCompleteFilter(category, searchTerm, minPrice, maxPrice, onlyWithDiscount, priceCalculatorFn) {
+        let filter = new BaseFilter();
+        
+        // Aplicar filtros em ordem lógica
+        if (category) {
+            filter = new CategoryFilter(filter, category);
+        }
+        
+        if (searchTerm?.trim()) {
+            filter = new SearchFilter(filter, searchTerm);
+        }
+        
+        if (minPrice !== undefined && maxPrice !== undefined) {
+            filter = new PriceRangeFilter(filter, minPrice, maxPrice);
+        }
+        
+        if (onlyWithDiscount && priceCalculatorFn) {
+            filter = new DiscountFilter(filter, onlyWithDiscount, priceCalculatorFn);
+        }
+        
+        return filter;
+    }
+}
+
+// === APLICAÇÃO PRINCIPAL ===
 
 class ProductApp {
     constructor() {
@@ -11,18 +233,21 @@ class ProductApp {
         this.isEditing = false;
         this.editingProductName = null;
         
+        // Sistema de filtros com padrão Decorator
+        this.currentFilter = new BaseFilter();
+        
         this.init();
     }
 
     async init() {
         try {
             this.setupEventListeners();
+            await this.loadCategoriesFromAPI(); // Carregar categorias primeiro
             await this.loadProductsFromAPI();
-            this.updateUI();
-            this.showToast('success', 'Sistema iniciado', 'Conectado ao banco de dados MySQL!');
+            this.updateDiscountFilterButton(); // Inicializar visibilidade do botão
         } catch (error) {
             console.error('Erro na inicialização:', error);
-            this.showToast('error', 'Erro de inicialização', 'Problemas ao carregar o sistema');
+            this.showToast('error', 'Erro', 'Erro ao carregar a aplicação');
         }
     }
 
@@ -49,6 +274,7 @@ class ProductApp {
         setupListener('btn-adicionar', 'click', () => this.openProductModal());
         setupListener('btn-limpar-filtros', 'click', () => this.clearFilters());
         setupListener('btn-atualizar-stats', 'click', () => this.updateStatistics());
+        setupListener('btn-only-discounts', 'click', () => this.toggleDiscountFilter());
 
         // Filtros
         setupListener('filtro-categoria', 'change', () => this.applyFilters());
@@ -85,10 +311,27 @@ class ProductApp {
 
     // === API CALLS ===
 
-    async loadProductsFromAPI() {
+    async loadProductsFromAPI(filterParams = {}) {
         try {
             this.showLoading(true);
-            const response = await fetch('/api/products');
+            
+            // Construir URL com parâmetros de filtro
+            const params = new URLSearchParams();
+            if (filterParams.category) params.append('category', filterParams.category);
+            if (filterParams.search) params.append('search', filterParams.search);
+            if (filterParams.minPrice !== undefined) params.append('minPrice', filterParams.minPrice);
+            if (filterParams.maxPrice !== undefined) params.append('maxPrice', filterParams.maxPrice);
+            if (filterParams.inStockOnly) params.append('inStockOnly', 'true');
+            
+            // Usar URL de filtros apenas se houver parâmetros válidos
+            const hasFilters = params.toString().length > 0;
+            const url = hasFilters 
+                ? `/api/products/filter?${params.toString()}`
+                : '/api/products';
+                
+            console.log('🌐 URL da requisição:', url);
+                
+            const response = await fetch(url);
             const result = await response.json();
             
             if (result.success) {
@@ -100,7 +343,18 @@ class ProductApp {
                     sku: item.sku || '',
                     stock: item.stock_quantity || 0
                 }));
-                this.showToast('success', 'Produtos carregados', `${result.count} produtos encontrados no banco`);
+                
+                // Exibir informações sobre filtros aplicados
+                if (result.filter && result.filter !== 'Filtro base (sem filtragem)') {
+                    this.showToast('success', 'Filtros aplicados', 
+                        `${result.filtered} produtos encontrados. Filtro: ${result.filter}`);
+                } else {
+                    this.showToast('success', 'Produtos carregados', 
+                        `${result.count || result.total || this.products.length} produtos encontrados`);
+                }
+                
+                this.updateProductsList(); // Atualizar a lista na interface
+                this.updateStatistics(); // Atualizar estatísticas
             } else {
                 throw new Error(result.message);
             }
@@ -126,6 +380,7 @@ class ProductApp {
             
             if (result.success) {
                 this.showToast('success', 'Produto adicionado', result.message);
+                await this.loadCategoriesFromAPI(); // Recarregar categorias (pode ter nova categoria)
                 await this.loadProductsFromAPI(); // Recarregar lista
                 return true;
             } else {
@@ -201,14 +456,16 @@ class ProductApp {
 
     updateUI() {
         this.updateProductsList();
-        this.updateFilters();
         this.updateStatistics();
         this.updateDiscountInfo();
     }
 
     updateProductsList() {
+        console.log('📋 Atualizando lista de produtos...');
         const container = document.getElementById('produtos-lista');
         const filteredProducts = this.getFilteredProducts();
+
+        console.log('🛍️ Produtos para exibir:', filteredProducts.length);
 
         if (filteredProducts.length === 0) {
             container.innerHTML = `
@@ -283,6 +540,37 @@ class ProductApp {
     }
 
     updateFilters() {
+        // As categorias agora são carregadas da API, não dos produtos filtrados
+        this.loadCategoriesFromAPI();
+    }
+
+    async loadCategoriesFromAPI() {
+        try {
+            const response = await fetch('/api/categories');
+            const result = await response.json();
+            
+            if (result.success) {
+                const categoriaSelect = document.getElementById('filtro-categoria');
+                const currentValue = categoriaSelect.value; // Preservar seleção atual
+                
+                categoriaSelect.innerHTML = '<option value="">Todas as categorias</option>' +
+                    result.data.map(cat => 
+                        `<option value="${cat}">${this.getCategoryDisplayName(cat)}</option>`
+                    ).join('');
+                
+                // Restaurar seleção anterior se ainda existe
+                if (currentValue && result.data.includes(currentValue)) {
+                    categoriaSelect.value = currentValue;
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao carregar categorias:', error);
+            // Fallback para categorias dos produtos atuais
+            this.updateFiltersFromCurrentProducts();
+        }
+    }
+
+    updateFiltersFromCurrentProducts() {
         const categoriaSelect = document.getElementById('filtro-categoria');
         const categories = [...new Set(this.products.map(p => p.category))];
         
@@ -482,21 +770,174 @@ class ProductApp {
     }
 
     getFilteredProducts() {
-        const categoria = document.getElementById('filtro-categoria').value;
-        const busca = document.getElementById('filtro-busca').value.toLowerCase();
-
-        return this.products.filter(product => {
-            const matchCategory = !categoria || product.category === categoria;
-            const matchSearch = !busca || 
-                product.name.toLowerCase().includes(busca) ||
-                (product.description && product.description.toLowerCase().includes(busca));
-            
-            return matchCategory && matchSearch;
-        });
+        // Os produtos já vêm filtrados do backend
+        // Esta função agora apenas retorna os produtos carregados
+        console.log('� Retornando produtos já filtrados do backend:', this.products.length);
+        return [...this.products];
     }
 
-    applyFilters() {
+    async applyFilters() {
+        // Aplicar filtros através da API do backend
+        const categoria = document.getElementById('filtro-categoria')?.value?.trim() || '';
+        const busca = document.getElementById('filtro-busca')?.value?.trim() || '';
+        
+        const filterParams = {};
+        
+        // Só adicionar parâmetros se eles tiverem valor
+        if (categoria) {
+            filterParams.category = categoria;
+        }
+        if (busca) {
+            filterParams.search = busca;
+        }
+        
+        // Recarregar produtos com filtros aplicados
+        await this.loadProductsFromAPI(filterParams);
+        this.updateFilterFeedback(filterParams);
+    }
+    
+    /**
+     * Mostra feedback visual sobre filtros ativos (nova funcionalidade)
+     */
+    updateFilterFeedback(filterParams = {}) {
+        // Se não foi fornecido parâmetros, pegar dos campos da interface
+        if (Object.keys(filterParams).length === 0) {
+            const categoria = document.getElementById('filtro-categoria')?.value || '';
+            const busca = document.getElementById('filtro-busca')?.value || '';
+            filterParams = {
+                category: categoria || undefined,
+                search: busca || undefined
+            };
+        }
+        
+        // Criar indicador de filtros ativos
+        let filterStatus = '';
+        const activeFilters = [];
+        
+        if (filterParams.category) {
+            activeFilters.push(`Categoria: ${this.getCategoryDisplayName(filterParams.category)}`);
+        }
+        
+        if (filterParams.search?.trim()) {
+            activeFilters.push(`Busca: "${filterParams.search}"`);
+        }
+        
+        if (filterParams.minPrice !== undefined || filterParams.maxPrice !== undefined) {
+            let priceFilter = 'Preço: ';
+            if (filterParams.minPrice !== undefined && filterParams.maxPrice !== undefined) {
+                priceFilter += `R$ ${filterParams.minPrice.toFixed(2)} - R$ ${filterParams.maxPrice.toFixed(2)}`;
+            } else if (filterParams.minPrice !== undefined) {
+                priceFilter += `>= R$ ${filterParams.minPrice.toFixed(2)}`;
+            } else {
+                priceFilter += `<= R$ ${filterParams.maxPrice.toFixed(2)}`;
+            }
+            activeFilters.push(priceFilter);
+        }
+        
+        if (filterParams.inStockOnly) {
+            activeFilters.push('Apenas em estoque');
+        }
+        
+        if (activeFilters.length > 0) {
+            filterStatus = `🔍 Filtros ativos: ${activeFilters.join(' + ')}`;
+        } else {
+            filterStatus = '📋 Mostrando todos os produtos';
+        }
+        
+        // Atualizar elementos de feedback se existirem
+        const feedbackElement = document.getElementById('filter-feedback');
+        if (feedbackElement) {
+            feedbackElement.textContent = filterStatus;
+            feedbackElement.className = activeFilters.length > 0 ? 'filter-active' : 'filter-inactive';
+        }
+        
+        // Log detalhado para debugging
+        console.log('🎯 Status do filtro:', filterStatus);
+        console.log('📊 Produtos exibidos:', this.products.length);
+    }
+    
+    /**
+     * Limpa todos os filtros e mostra todos os produtos
+     */
+    async clearFilters() {
+        console.log('🧹 Iniciando limpeza de filtros...');
+        
+        // Resetar campos de filtro
+        document.getElementById('filtro-categoria').value = '';
+        document.getElementById('filtro-busca').value = '';
+        
+        console.log('🔄 Campos limpos, recarregando produtos...');
+        
+        // Recarregar todos os produtos sem filtros
+        await this.loadProductsFromAPI();
+        
+        // Limpar feedback visual dos filtros
+        this.updateFilterFeedback({});
+        
+        // Feedback para usuário
+        this.showToast('info', 'Filtros limpos', 'Mostrando todos os produtos');
+        console.log('✅ Filtros limpos com sucesso - Mostrando todos os produtos');
+    }
+    
+    /**
+     * Aplica filtro de desconto usando padrão Decorator
+     */
+    applyDiscountFilter(onlyWithDiscount = false) {
+        const categoria = document.getElementById('filtro-categoria').value;
+        const busca = document.getElementById('filtro-busca').value;
+        
+        // Criar filtro completo incluindo desconto
+        this.currentFilter = FilterFactory.createCompleteFilter(
+            categoria || null,
+            busca || '',
+            undefined, // minPrice
+            undefined, // maxPrice
+            onlyWithDiscount,
+            onlyWithDiscount ? (product) => this.calculateFinalPrice(product) : null
+        );
+        
+        console.log('💰 Filtro com desconto aplicado:', this.currentFilter.getDescription());
         this.updateProductsList();
+        this.updateFilterFeedback();
+    }
+    
+    /**
+     * Toggle para filtro de produtos apenas com desconto
+     */
+    toggleDiscountFilter() {
+        const btn = document.getElementById('btn-only-discounts');
+        const isActive = btn.classList.contains('active');
+        
+        if (isActive) {
+            // Remover filtro de desconto
+            btn.classList.remove('active');
+            btn.innerHTML = '<i class="fas fa-percentage"></i> Apenas com desconto';
+            this.applyDiscountFilter(false);
+            this.showToast('info', 'Filtro removido', 'Mostrando todos os produtos');
+        } else {
+            // Aplicar filtro de desconto
+            btn.classList.add('active');
+            btn.innerHTML = '<i class="fas fa-check"></i> Com desconto ativo';
+            this.applyDiscountFilter(true);
+            this.showToast('success', 'Filtro aplicado', 'Mostrando apenas produtos com desconto');
+        }
+    }
+    
+    /**
+     * Atualiza visibilidade do botão de filtro de desconto
+     */
+    updateDiscountFilterButton() {
+        const btn = document.getElementById('btn-only-discounts');
+        if (!btn) return;
+        
+        // Mostrar botão apenas se há descontos ativos
+        if (this.activeDiscounts.length > 0) {
+            btn.style.display = 'block';
+        } else {
+            btn.style.display = 'none';
+            btn.classList.remove('active');
+            btn.innerHTML = '<i class="fas fa-percentage"></i> Apenas com desconto';
+        }
     }
 
     // === PRODUCT MANAGEMENT ===
@@ -637,6 +1078,7 @@ class ProductApp {
             `${percentual}% de desconto aplicado em ${this.getCategoryDisplayName(categoria)}`);
         
         this.updateUI();
+        this.updateDiscountFilterButton();
         
         // Limpar form
         document.getElementById('desconto-percentual').value = '';
@@ -664,6 +1106,7 @@ class ProductApp {
             `${percentual}% de desconto aplicado em todos os produtos`);
         
         this.updateUI();
+        this.updateDiscountFilterButton();
         
         // Limpar form
         document.getElementById('cupom-percentual').value = '';
@@ -673,6 +1116,7 @@ class ProductApp {
         this.activeDiscounts = this.activeDiscounts.filter(d => d.id !== discountId);
         this.showToast('success', 'Desconto removido', 'Desconto foi removido com sucesso');
         this.updateUI();
+        this.updateDiscountFilterButton();
     }
 
     clearDiscounts() {
@@ -684,13 +1128,7 @@ class ProductApp {
         this.activeDiscounts = [];
         this.showToast('success', 'Descontos removidos', 'Todos os descontos foram removidos');
         this.updateUI();
-    }
-
-    clearFilters() {
-        document.getElementById('filtro-categoria').value = '';
-        document.getElementById('filtro-busca').value = '';
-        this.updateProductsList();
-        this.showToast('success', 'Filtros limpos', 'Todos os filtros foram removidos');
+        this.updateDiscountFilterButton();
     }
 
     // === CALCULATIONS ===

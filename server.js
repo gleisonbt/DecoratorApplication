@@ -241,6 +241,424 @@ app.get('/api/products/stats', async (req, res) => {
     }
 });
 
+// === ROTAS DE FILTROS COM PADRÃO DECORATOR ===
+
+// Filtrar produtos com múltiplos parâmetros
+app.get('/api/products/filter', async (req, res) => {
+    try {
+        const {
+            category,
+            search,
+            minPrice,
+            maxPrice,
+            inStockOnly,
+            limit,
+            offset
+        } = req.query;
+
+        // Converter parâmetros para tipos corretos
+        const filterParams = {
+            category: category || undefined,
+            search: search || undefined,
+            minPrice: minPrice ? parseFloat(minPrice) : undefined,
+            maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
+            inStockOnly: inStockOnly === 'true',
+            limit: limit ? parseInt(limit) : undefined,
+            offset: offset ? parseInt(offset) : undefined
+        };
+
+        // Aplicar filtros usando padrão Decorator
+        const result = await applyProductFilters(filterParams);
+        
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(500).json(result);
+        }
+    } catch (error) {
+        console.error('Erro na rota de filtros:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro interno do servidor',
+            error: error.message
+        });
+    }
+});
+
+// Obter categorias disponíveis
+app.get('/api/categories', async (req, res) => {
+    try {
+        const products = await productRepository.findAll();
+        
+        if (products.success) {
+            const categories = [...new Set(products.data.map(p => p.category))];
+            res.json({
+                success: true,
+                data: categories.sort()
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'Erro ao buscar categorias'
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao buscar categorias:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro interno do servidor',
+            error: error.message
+        });
+    }
+});
+
+// Estatísticas de produtos filtrados
+app.get('/api/products/stats', async (req, res) => {
+    try {
+        const {
+            category,
+            search,
+            minPrice,
+            maxPrice,
+            inStockOnly
+        } = req.query;
+
+        const filterParams = {
+            category: category || undefined,
+            search: search || undefined,
+            minPrice: minPrice ? parseFloat(minPrice) : undefined,
+            maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
+            inStockOnly: inStockOnly === 'true'
+        };
+
+        const stats = await getFilteredStats(filterParams);
+        
+        if (stats.success) {
+            res.json(stats);
+        } else {
+            res.status(500).json(stats);
+        }
+    } catch (error) {
+        console.error('Erro ao calcular estatísticas:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro interno do servidor',
+            error: error.message
+        });
+    }
+});
+
+// === FUNÇÕES DE FILTROS COM PADRÃO DECORATOR ===
+
+/**
+ * Interface básica para filtros usando padrão Decorator
+ */
+class ProductFilter {
+    async filter(products) {
+        throw new Error('Método filter deve ser implementado');
+    }
+    
+    getDescription() {
+        throw new Error('Método getDescription deve ser implementado');
+    }
+}
+
+/**
+ * Filtro base - não aplica filtragem
+ */
+class BaseFilter extends ProductFilter {
+    async filter(products) {
+        return [...products];
+    }
+    
+    getDescription() {
+        return 'Filtro base (sem filtragem)';
+    }
+}
+
+/**
+ * Decorator abstrato para filtros
+ */
+class FilterDecorator extends ProductFilter {
+    constructor(filter) {
+        super();
+        this.baseFilter = filter;
+    }
+}
+
+/**
+ * Filtro por categoria
+ */
+class CategoryFilter extends FilterDecorator {
+    constructor(filter, category) {
+        super(filter);
+        this.category = category;
+    }
+    
+    async filter(products) {
+        const baseFiltered = await this.baseFilter.filter(products);
+        return baseFiltered.filter(product => 
+            product.category.toLowerCase() === this.category.toLowerCase()
+        );
+    }
+    
+    getDescription() {
+        const baseDesc = this.baseFilter.getDescription();
+        const categoryDesc = `Categoria: ${this.category}`;
+        return baseDesc === 'Filtro base (sem filtragem)' 
+            ? categoryDesc 
+            : `${baseDesc} + ${categoryDesc}`;
+    }
+}
+
+/**
+ * Filtro por busca textual
+ */
+class SearchFilter extends FilterDecorator {
+    constructor(filter, searchTerm) {
+        super(filter);
+        this.searchTerm = searchTerm;
+    }
+    
+    async filter(products) {
+        const baseFiltered = await this.baseFilter.filter(products);
+        const term = this.searchTerm.toLowerCase();
+        return baseFiltered.filter(product => 
+            product.name.toLowerCase().includes(term) ||
+            (product.description && product.description.toLowerCase().includes(term))
+        );
+    }
+    
+    getDescription() {
+        const baseDesc = this.baseFilter.getDescription();
+        const searchDesc = `Busca: "${this.searchTerm}"`;
+        return baseDesc === 'Filtro base (sem filtragem)' 
+            ? searchDesc 
+            : `${baseDesc} + ${searchDesc}`;
+    }
+}
+
+/**
+ * Filtro por faixa de preço
+ */
+class PriceRangeFilter extends FilterDecorator {
+    constructor(filter, minPrice, maxPrice) {
+        super(filter);
+        this.minPrice = minPrice;
+        this.maxPrice = maxPrice;
+    }
+    
+    async filter(products) {
+        const baseFiltered = await this.baseFilter.filter(products);
+        return baseFiltered.filter(product => {
+            const price = parseFloat(product.price);
+            
+            if (this.minPrice !== undefined && price < this.minPrice) {
+                return false;
+            }
+            
+            if (this.maxPrice !== undefined && price > this.maxPrice) {
+                return false;
+            }
+            
+            return true;
+        });
+    }
+    
+    getDescription() {
+        const baseDesc = this.baseFilter.getDescription();
+        let priceDesc = 'Preço: ';
+        
+        if (this.minPrice !== undefined && this.maxPrice !== undefined) {
+            priceDesc += `R$ ${this.minPrice.toFixed(2)} - R$ ${this.maxPrice.toFixed(2)}`;
+        } else if (this.minPrice !== undefined) {
+            priceDesc += `>= R$ ${this.minPrice.toFixed(2)}`;
+        } else if (this.maxPrice !== undefined) {
+            priceDesc += `<= R$ ${this.maxPrice.toFixed(2)}`;
+        }
+        
+        return baseDesc === 'Filtro base (sem filtragem)' 
+            ? priceDesc 
+            : `${baseDesc} + ${priceDesc}`;
+    }
+}
+
+/**
+ * Filtro por estoque
+ */
+class StockFilter extends FilterDecorator {
+    constructor(filter, inStockOnly = true) {
+        super(filter);
+        this.inStockOnly = inStockOnly;
+    }
+    
+    async filter(products) {
+        const baseFiltered = await this.baseFilter.filter(products);
+        
+        if (!this.inStockOnly) {
+            return baseFiltered;
+        }
+        
+        return baseFiltered.filter(product => {
+            const stock = parseInt(product.stock_quantity) || 0;
+            return stock > 0;
+        });
+    }
+    
+    getDescription() {
+        const baseDesc = this.baseFilter.getDescription();
+        const stockDesc = this.inStockOnly ? 'Apenas em estoque' : 'Incluir sem estoque';
+        return baseDesc === 'Filtro base (sem filtragem)' 
+            ? stockDesc 
+            : `${baseDesc} + ${stockDesc}`;
+    }
+}
+
+/**
+ * Factory para criar filtros compostos
+ */
+class FilterFactory {
+    static createCompleteFilter(category, searchTerm, minPrice, maxPrice, inStockOnly) {
+        let filter = new BaseFilter();
+        
+        if (category) {
+            filter = new CategoryFilter(filter, category);
+        }
+        
+        if (searchTerm?.trim()) {
+            filter = new SearchFilter(filter, searchTerm);
+        }
+        
+        if (minPrice !== undefined || maxPrice !== undefined) {
+            filter = new PriceRangeFilter(filter, minPrice, maxPrice);
+        }
+        
+        if (inStockOnly) {
+            filter = new StockFilter(filter, true);
+        }
+        
+        return filter;
+    }
+}
+
+/**
+ * Aplica filtros aos produtos usando padrão Decorator
+ */
+async function applyProductFilters(filterParams) {
+    try {
+        // Buscar todos os produtos
+        const allProducts = await productRepository.findAll();
+        
+        if (!allProducts.success) {
+            return {
+                success: false,
+                message: 'Erro ao buscar produtos do banco de dados'
+            };
+        }
+        
+        // Criar filtro composto
+        const filter = FilterFactory.createCompleteFilter(
+            filterParams.category,
+            filterParams.search,
+            filterParams.minPrice,
+            filterParams.maxPrice,
+            filterParams.inStockOnly
+        );
+        
+        // Aplicar filtros
+        const filteredProducts = await filter.filter(allProducts.data);
+        
+        // Log para debug
+        console.log('🔍 Filtro aplicado:', filter.getDescription());
+        console.log('📊 Produtos encontrados:', filteredProducts.length, 'de', allProducts.data.length);
+        
+        // Aplicar paginação se especificada
+        let paginatedProducts = filteredProducts;
+        if (filterParams.limit !== undefined) {
+            const offset = filterParams.offset || 0;
+            paginatedProducts = filteredProducts.slice(offset, offset + filterParams.limit);
+        }
+        
+        return {
+            success: true,
+            data: paginatedProducts,
+            total: filteredProducts.length,
+            filtered: filteredProducts.length,
+            original: allProducts.data.length,
+            filter: filter.getDescription(),
+            pagination: filterParams.limit ? {
+                limit: filterParams.limit,
+                offset: filterParams.offset || 0,
+                hasNext: (filterParams.offset || 0) + filterParams.limit < filteredProducts.length
+            } : null
+        };
+        
+    } catch (error) {
+        console.error('Erro ao aplicar filtros:', error);
+        return {
+            success: false,
+            message: 'Erro interno do servidor ao filtrar produtos',
+            error: error.message
+        };
+    }
+}
+
+/**
+ * Calcula estatísticas dos produtos filtrados
+ */
+async function getFilteredStats(filterParams) {
+    try {
+        const result = await applyProductFilters(filterParams);
+        
+        if (!result.success) {
+            return result;
+        }
+        
+        const products = result.data;
+        
+        if (products.length === 0) {
+            return {
+                success: true,
+                data: {
+                    total: 0,
+                    averagePrice: 0,
+                    minPrice: 0,
+                    maxPrice: 0,
+                    totalValue: 0,
+                    categoriesCount: 0,
+                    inStockCount: 0,
+                    outOfStockCount: 0
+                }
+            };
+        }
+        
+        const prices = products.map(p => parseFloat(p.price));
+        const totalValue = prices.reduce((sum, price) => sum + price, 0);
+        const inStockProducts = products.filter(p => (parseInt(p.stock_quantity) || 0) > 0);
+        
+        return {
+            success: true,
+            data: {
+                total: products.length,
+                averagePrice: totalValue / products.length,
+                minPrice: Math.min(...prices),
+                maxPrice: Math.max(...prices),
+                totalValue,
+                categoriesCount: new Set(products.map(p => p.category)).size,
+                inStockCount: inStockProducts.length,
+                outOfStockCount: products.length - inStockProducts.length
+            }
+        };
+        
+    } catch (error) {
+        console.error('Erro ao calcular estatísticas:', error);
+        return {
+            success: false,
+            message: 'Erro ao calcular estatísticas'
+        };
+    }
+}
+
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {
     console.error(err.stack);
