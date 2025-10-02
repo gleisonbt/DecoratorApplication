@@ -1,41 +1,56 @@
-# Decorator Application
+# Decorator Application - Sistema Web de Gerenciamento de Produtos
 
-Uma aplicação TypeScript demonstrando arquitetura MVC e padrão Decorator para gerenciamento de produtos com sistema de descontos.
+Uma aplicação web TypeScript demonstrando arquitetura MVC, padrão Decorator e integração com MySQL para gerenciamento de produtos com sistema de descontos.
 
 ## 📋 Sobre o Projeto
 
 Este projeto demonstra:
+- **Interface Web Moderna** com design responsivo
 - **Arquitetura MVC** (Model-View-Controller)
 - **Padrão Decorator** para cálculo de preços e descontos
 - **TypeScript** com tipagem forte
-- **Gerenciamento de produtos** com categorias
+- **Integração MySQL** para persistência de dados
+- **API REST** com Express.js
 - **Sistema de descontos** flexível e extensível
 
-## 🏗️ Arquitetura MVC
+## 🌐 Interface Web
+
+A aplicação possui uma interface web moderna com:
+- **Dashboard interativo** para gerenciamento de produtos
+- **Sistema de descontos visuais** com badges e post-its
+- **Formulários responsivos** para CRUD de produtos
+- **Filtros e busca** em tempo real
+- **Estatísticas e métricas** visuais
+
+## 🏗️ Arquitetura
 
 ### 📁 Estrutura do Projeto
 
 ```
-src/
-├── app.ts                    # Aplicação principal
-├── controllers/
-│   └── ProductController.ts  # Controller (lógica de controle)
-├── models/
-│   ├── Product.ts           # Modelo Product com Category enum integrado
-│   ├── PriceCalc.ts         # Interface para cálculo de preços
-│   └── Product.ts           # Modelo de produto
-├── services/
-│   ├── PriceCalculators.ts  # Implementações do padrão Decorator
-│   └── ProductService.ts    # Serviço de produtos (camada de dados)
-└── views/
-    └── ProductView.ts       # View (interface de usuário)
+├── public/                   # Interface web
+│   ├── index.html           # Página principal
+│   ├── app.js               # Lógica frontend
+│   └── styles-clean.css     # Estilos modernos
+├── server.js                # Servidor Express.js
+├── src/
+│   ├── controllers/
+│   │   └── ProductControllerDB.ts  # Controller com MySQL
+│   ├── models/
+│   │   ├── Product.ts              # Modelo Product
+│   │   └── PriceCalc.ts            # Interface para decorators
+│   ├── services/
+│   │   ├── ProductServiceDB.ts     # Service com banco de dados
+│   │   └── PriceCalculators.ts     # Implementações do Decorator
+│   └── database/
+│       └── connection.ts           # Conexão MySQL
 ```
 
-### 🔧 Componentes MVC
+### 🔧 Componentes
 
-- **Model**: `Product`, `Category`, `PriceCalc` - Representam os dados
-- **View**: `ProductView` - Interface de usuário e exibição
-- **Controller**: `ProductController` - Lógica de negócio e controle
+- **Frontend**: Interface web moderna com JavaScript vanilla
+- **Backend**: API REST com Express.js e TypeScript
+- **Database**: MySQL para persistência
+- **Decorators**: Sistema flexível de cálculo de preços
 
 ## 🎯 Padrão Decorator
 
